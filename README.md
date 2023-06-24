@@ -3,7 +3,7 @@ This script is designed to be run on Sundays to evenly distribute all tasks with
 
 ## Installation
 1. Clone this repository
-2. Then run these commands
+2. Then run these commands in the root directory of the project.
 ```shell
 $ brew install python3
 $ python3 -m venv venv
