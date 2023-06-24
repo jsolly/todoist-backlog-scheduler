@@ -1,9 +1,9 @@
 # todoist-backlog-scheduler
-This script is designed to be run on Sundays to evently distribute all tasks with no date to the following week (Monday to Sunday).
+This script is designed to be run on Sundays to evenly distribute all tasks with no date to the following week (Monday to Sunday).
 
 ## Installation
 1. Clone this repository
-2. Install Python 3
+2. Then run these commands
 ```shell
 $ brew install python3
 $ python3 -m venv venv
