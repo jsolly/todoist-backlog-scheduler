@@ -6,8 +6,8 @@ from datetime import datetime, timedelta
 
 dotenv.load_dotenv()
 
-TODOIST_API_KEY = os.getenv("TODOIST_API_KEY")
-WEEK_START_DAY = "Monday"
+TODOIST_API_KEY = os.getenv("TODOIST_API_KEY") # Put your Todoist API key in a .env file in the same directory as this script
+WEEK_START_DAY = "Monday" # Set this to the day of the week that you want to start your week on (e.g. Monday, Tuesday, etc.)
 
 
 def get_tasks(api, filter):
