@@ -1,6 +1,15 @@
 # todoist-backlog-scheduler
 This script is designed to be run on Sundays to evenly distribute all tasks with no date to the following week (Monday to Sunday).
 
+## Motivation
+In the past, the Smart Schedule was a phenomenal feature many of us heavily relied on to manage our pile of pending tasks. Regrettably, about three years ago, Todoist chose to eliminate this feature, citing it as 'overly complicated' and under-utilized.
+
+To replicate what Smart Schedule used to offer, I've developed a concise Python Script. Its primary function is to assign undated tasks to days with lighter workloads. The script queries Todoist for tasks falling under the 'no date' filter. It then strategically assigns these tasks throughout the week, taking into consideration the volume of tasks already allocated to specific days.
+
+The ultimate objective is to ensure a balanced distribution of tasks from Monday to Sunday.
+
+If this initiative resonates with you and you'd like to contribute or suggest added functionalities, I welcome any form of collaboration.
+
 ## Installation
 1. Clone this repository
 2. Then run these commands in the root directory of the project.
