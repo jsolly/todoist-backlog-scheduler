@@ -19,6 +19,7 @@ def get_tasks(api, filter):
     except Exception as error:
         print(error)
 
+
 def get_next_week_day_dict(WEEK_START_DAY):
     """
     Generate a dictionary of the next week starting from WEEK_START_DAY.
@@ -61,6 +62,16 @@ def get_next_week_day_dict(WEEK_START_DAY):
 def populate_next_week_dict_with_existing_tasks(api, next_week_day_dict):
     """
     Populate the next week day dictionary with the number of tasks that are already due on each day.
+    Will return another dictionary that looks something like this:
+    {
+        "2023-26-06": 3,
+        "2023-27-06": 0,
+        "2023-28-06": 2,
+        "2023-29-06": 1,
+        "2023-30-06": 5,
+        "2023-01-07": 4,
+        "2023-02-07": 3,
+    }
     """
     for day in next_week_day_dict.keys():
         filter = f"Due on {day}"
@@ -73,7 +84,9 @@ def distribute_tasks(api, tasks):
     Distribute tasks evenly across the next week starting from WEEK_START_DAY taking into account existing tasks.
     """
     next_week_day_dict = get_next_week_day_dict(WEEK_START_DAY)
-    next_week_day_dict = populate_next_week_dict_with_existing_tasks(api, next_week_day_dict)
+    next_week_day_dict = populate_next_week_dict_with_existing_tasks(
+        api, next_week_day_dict
+    )
 
     week_task_heap = [(count, day) for day, count in next_week_day_dict.items()]
     heapq.heapify(week_task_heap)
