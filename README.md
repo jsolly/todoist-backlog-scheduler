@@ -4,7 +4,7 @@ This script evenly distributes all tasks with no date to the following week, (WE
 ## Motivation
 In the past, the Smart Schedule was a phenomenal feature many of us heavily relied on to manage our pile of pending tasks. Regrettably, about three years ago, Todoist chose to eliminate this feature, citing it as 'overly complicated' and under-utilized.
 
-To replicate what Smart Schedule used to offer, I've developed a concise Python Script. Its primary function is to assign undated tasks to days with lighter workloads. The script queries Todoist for tasks falling under the 'no date' filter. It then strategically assigns these tasks throughout the week, taking into consideration the volume of tasks already allocated to specific days.
+To replicate what Smart Schedule used to offer, I've developed a concise Python Script. Its primary function is to assign undated tasks to days with lighter workloads. The script queries Todoist for tasks falling under the 'no date' filter. It then strategically assigns these tasks throughout the following week, taking into consideration the volume of tasks already allocated to specific days.
 
 The ultimate objective is to ensure a balanced distribution of tasks for the following week.
 
