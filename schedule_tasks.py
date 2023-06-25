@@ -9,8 +9,31 @@ dotenv.load_dotenv()
 TODOIST_API_KEY = os.getenv("TODOIST_API_KEY")
 WEEK_START_DAY = "Monday"
 
+
+def get_tasks(api, filter):
+    """
+    Get all tasks that match the filter.
+    """
+    try:
+        return api.get_tasks(filter=filter)
+    except Exception as error:
+        print(error)
+
 def get_next_week_day_dict(WEEK_START_DAY):
-    # Define a dictionary that maps week day names to dateutil constants
+    """
+    Generate a dictionary of the next week starting from WEEK_START_DAY.
+    It will look like something like this where 2021-01-04 is the day of the week that WEEK_START_DAY is set to.
+    In my case, it is Monday.
+    {
+        "2023-26-06": 0,
+        "2023-27-06": 0,
+        "2023-28-06": 0,
+        "2023-29-06": 0,
+        "2023-30-06": 0,
+        "2023-01-07": 0,
+        "2023-02-07": 0,
+    }
+    """
     days_map = {
         "Monday": 0,
         "Tuesday": 1,
@@ -35,21 +58,22 @@ def get_next_week_day_dict(WEEK_START_DAY):
     return {day.date().strftime("%Y-%m-%d"): 0 for day in next_week_days}
 
 
-def get_tasks(api, filter):
-    try:
-        return api.get_tasks(filter=filter)
-    except Exception as error:
-        print(error)
+def populate_next_week_dict_with_existing_tasks(api, next_week_day_dict):
+    """
+    Populate the next week day dictionary with the number of tasks that are already due on each day.
+    """
+    for day in next_week_day_dict.keys():
+        filter = f"Due on {day}"
+        next_week_day_dict[day] = len(get_tasks(api, filter=filter))
+    return next_week_day_dict
 
 
 def distribute_tasks(api, tasks):
+    """
+    Distribute tasks evenly across the next week starting from WEEK_START_DAY taking into account existing tasks.
+    """
     next_week_day_dict = get_next_week_day_dict(WEEK_START_DAY)
-
-    for day in next_week_day_dict.keys():
-        filter = f"Due on {day}"
-
-        # Assign the current task count for the day to the dictionary
-        next_week_day_dict[day] = len(get_tasks(api, filter=filter))
+    next_week_day_dict = populate_next_week_dict_with_existing_tasks(api, next_week_day_dict)
 
     week_task_heap = [(count, day) for day, count in next_week_day_dict.items()]
     heapq.heapify(week_task_heap)
