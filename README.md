@@ -1,5 +1,11 @@
 # todoist-backlog-scheduler
-This script evenly distributes all tasks with no date to the following week, (WEEK_START_DAY + 6 days).
+This script evenly distributes all tasks with no date to the following week. So that means the tasks will be distributed to the upcoming WEEK_START_DAY and the 6 days after WEEK_START_DAY.
+
+So let's say your WEEK_START_DAY is Monday.
+
+You run the script on a Wednesday.
+
+All your unscheduled tasks will be evenly distributed between Monday and Sunday of the following week.
 
 ## Motivation
 In the past, the Smart Schedule was a phenomenal feature many of us heavily relied on to manage our pile of pending tasks. Regrettably, about three years ago, Todoist chose to eliminate this feature, citing it as 'overly complicated' and under-utilized.
