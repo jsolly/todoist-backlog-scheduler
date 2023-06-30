@@ -4,9 +4,6 @@
 name: Todoist Backlog Scheduler
 
 on:
-  push:
-    branches:
-      - main
   schedule:
     - cron: "0 21 * * 0" # Every Sunday at 9PM
 
