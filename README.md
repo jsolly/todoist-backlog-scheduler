@@ -28,8 +28,9 @@ $ pip install -r requirements.txt
 ```
 
 ## Setup
-1 - You can manually run the script like this in the terminal
+1. Rename `sample.env` to .env and add your Todoist key, which is in the [integration settings view](https://todoist.com/prefs/integrations) (Developer Tab) of your Todoist app.
+2. You can manually run the script like this in the terminal
 ```shell
 $ python3 schedule_tasks.py
 ```
-2 - I have also added a Github Actions file inside .github/workflows that will run the script every Sunday at 9PM. You can change the schedule by editing the cron expression in the file.
+  - I have also added a Github Actions file inside .github/workflows that will run the script every Sunday at 9PM. You can change the schedule by editing the cron expression in the file. If you want to go this route, add your TODOIST_API_KEY to your workflow secrets.
