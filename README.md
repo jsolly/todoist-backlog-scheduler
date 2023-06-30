@@ -26,11 +26,4 @@ $ pip install -r requirements.txt
 ```shell
 $ python3 schedule_tasks.py
 ```
-2 - Or you can run it on a schedule using cron or windows task scheduler
-```shell
-$ crontab -e
-```
-Add this line to the file (run every Sunday 9PM)
-```shell
-0 21 * * 0 /path/to/venv/bin/python3 /path/to/schedule_tasks.py
-```
+2 - I have also added a Github Actions file inside .github/workflows that will run the script every Sunday at 9PM. You can change the schedule by editing the cron expression in the file.
