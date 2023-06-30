@@ -27,5 +27,6 @@ jobs:
         pip install --upgrade pip
         pip install -r requirements.txt
     - name: run-scheduler
+      run: |
         source venv/bin/activate
         python3 schedule_tasks.py
