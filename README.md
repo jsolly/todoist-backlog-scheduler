@@ -23,8 +23,7 @@ If this initiative resonates with you and you'd like to contribute or suggest ad
 $ brew install python3
 $ python3 -m venv venv
 $ source venv/bin/activate
-$ pip install --upgrade pip
-$ pip install -r requirements.txt
+$ pip install --upgrade pip && pip install -r requirements.txt
 ```
 
 ## Setup
