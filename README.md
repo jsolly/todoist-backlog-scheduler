@@ -20,16 +20,16 @@ If this initiative resonates with you and you'd like to contribute or suggest ad
 1. Clone this repository
 2. Then run these commands in the root directory of the project.
 ```shell
-$ brew install python3
-$ python3 -m venv venv
-$ source venv/bin/activate
-$ pip install --upgrade pip && pip install -r requirements.txt
+brew install python3
+python3 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip && pip install -r requirements.txt
 ```
 
 ## Setup
 1. Rename `sample.env` to .env and add your Todoist key, which is in the [integration settings view](https://todoist.com/prefs/integrations) (Developer Tab) of your Todoist app.
 2. You can manually run the script like this in the terminal
 ```shell
-$ python3 schedule_tasks.py
+python3 schedule_tasks.py
 ```
   - I have also added a Github Actions file inside .github/workflows that will run the script every Sunday at 9PM. You can change the schedule by editing the cron expression in the file. If you want to go this route, add your TODOIST_API_KEY to your workflow secrets.
