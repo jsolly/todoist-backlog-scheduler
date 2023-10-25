@@ -113,3 +113,4 @@ if __name__ == "__main__":
     tasks = get_tasks(api, "no date")
     if tasks:
         distribute_tasks(api, tasks)
+        print(f"Successfully distributed {len(tasks)} tasks across the next week.")
