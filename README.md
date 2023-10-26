@@ -21,8 +21,8 @@ If this initiative resonates with you and you'd like to contribute or suggest ad
 2. Then run these commands in the root directory of the project.
 ```shell
 brew install python3
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 pip install --upgrade pip && pip install -r requirements.txt
 ```
 
