@@ -1,29 +1,22 @@
-# todoist-backlog-scheduler
-This script evenly distributes all tasks with no date to the following week. So that means the tasks will be distributed to the upcoming WEEK_START_DAY and the 6 days after WEEK_START_DAY.
+# Todoist Backlog Scheduler
+## Introduction
+The Smart Schedule feature was a valuable asset in Todoist that helped many users efficiently manage their backlog of tasks. However, about three years ago, Todoist discontinued this feature, labeling it as 'overly complex' and not widely used.
 
-So let's say your WEEK_START_DAY is Monday.
+In an attempt to recreate the benefits of Smart Schedule, I've crafted a succinct Python script. Its core objective is to distribute undated tasks to days with fewer scheduled activities. The script interacts with Todoist to identify tasks under the 'no date' filter. It then thoughtfully allocates these tasks across the upcoming week, taking into account the number of tasks already scheduled for each day.
 
-You run the script on a Wednesday.
+For example, if you've set your 'week start day' to 'Monday' in the Todoist settings:
 
-All your unscheduled tasks will be evenly distributed between Monday and Sunday of the following week.
+Running this script will evenly distribute all your undated tasks from the following Monday through to the following Sunday.
 
-## Motivation
-In the past, the Smart Schedule was a phenomenal feature many of us heavily relied on to manage our pile of pending tasks. Regrettably, about three years ago, Todoist chose to eliminate this feature, citing it as 'overly complicated' and under-utilized.
-
-To replicate what Smart Schedule used to offer, I've developed a concise Python Script. Its primary function is to assign undated tasks to days with lighter workloads. The script queries Todoist for tasks falling under the 'no date' filter. It then strategically assigns these tasks throughout the following week, taking into consideration the volume of tasks already allocated to specific days.
-
-The ultimate objective is to ensure a balanced distribution of tasks for the following week.
-
-If this initiative resonates with you and you'd like to contribute or suggest added functionalities, I welcome any form of collaboration.
+If this project aligns with your interests and you'd like to contribute or propose additional features, I'm open to any collaborative efforts.
 
 ## Installation
 1. Clone this repository
-2. Then run these commands in the root directory of the project.
+2. run these commands in the root directory of the project.
 ```shell
-brew install python3
 python3 -m venv .venv
 source .venv/bin/activate
-pip install --upgrade pip && pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 
 ## Setup
