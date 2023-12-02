@@ -1,3 +1,6 @@
 .venv
 .env
 .vscode
+
+# MacOS
+.DS_Store
