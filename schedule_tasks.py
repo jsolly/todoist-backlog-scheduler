@@ -114,7 +114,7 @@ if __name__ == "__main__":
     TODOIST_API_KEY = os.getenv("TODOIST_API_KEY") # Put your Todoist API key in a .env file in the same directory as this script
     API = TodoistAPI(TODOIST_API_KEY)
     WEEK_START_DAY = get_start_day()
-    TASKS = get_tasks(API, "no date")
+    TASKS = get_tasks(API, "no date & !##Alexa*")
     if TASKS:
         distribute_tasks(API, TASKS, WEEK_START_DAY)
         print(f"Successfully distributed {len(TASKS)} tasks across the next week.")
