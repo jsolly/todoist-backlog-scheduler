@@ -1,120 +1,84 @@
+# This script evenly distributes Todoist tasks that have no due date across the next week,
+# starting from your Todoist-configured week start day. To use:
+# 1. Create a .env file with your TODOIST_API_KEY
+# 2. Run the script to automatically distribute all undated tasks
+
 import heapq
 import os
+from datetime import datetime, timedelta
 import dotenv
 import requests
 from todoist_api_python.api import TodoistAPI
-from datetime import datetime, timedelta
 
 dotenv.load_dotenv()
 
-def get_start_day() -> str:
-    """
-    Make a GET call to the https://api.todoist.com/API/v2/user endpoint with the user's token to get the start day of the week
-    that has been set in the user's Todoist settings. The start day of the week is returned as an integer where 1 is Monday and 7 is Sunday.
-    """
-    url = "https://api.todoist.com/API/v2/user"
-    headers = {"Authorization": f"Bearer {TODOIST_API_KEY}"}
-    
-    response = requests.get(url, headers=headers)
-    
+def get_start_day() -> int:
+    """Get user's week start day setting from Todoist (1=Monday, 7=Sunday)."""
+    response = requests.get(
+        "https://api.todoist.com/API/v2/user",
+        headers={"Authorization": f"Bearer {os.getenv('TODOIST_API_KEY')}"}
+    )
     return response.json()["start_day"]
 
-
-def get_tasks(api, filter):
+def get_tasks_for_week(api: TodoistAPI, start_date: datetime) -> dict[str, int]:
     """
-    Get all tasks that match the filter.
-    """
-    try:
-        return api.get_tasks(filter=filter)
-    except Exception as error:
-        print(error)
-
-
-def get_next_week_day_dict(week_start_day: int):
-    """
-    Generate a dictionary of the next week starting from week_start_day.
-    It will look like something like this where 2023-10-23 is a Monday and
-    2023-10-29 is a Sunday:
+    Get number of tasks per day for the week starting from start_date.
+    Returns dict mapping date strings (YYYY-MM-DD) to task counts.
+    
+    Example return value:
     {
-        "2023-10-30": 1,
-        "2023-10-31": 2,
-        "2023-11-01": 3,
-        "2023-11-02": 4,
-        "2023-11-03": 5,
-        "2023-11-04": 6,
-        "2023-11-05": 7,
+        "2023-10-30": 1,  # 1 task on Monday
+        "2023-10-31": 2,  # 2 tasks on Tuesday
+        "2023-11-01": 0,  # no tasks on Wednesday
+        "2023-11-02": 4,  # 4 tasks on Thursday
+        "2023-11-03": 1,  # 1 task on Friday
+        "2023-11-04": 0,  # no tasks on Saturday
+        "2023-11-05": 3   # 3 tasks on Sunday
     }
     """
+    # Initialize a dict with 7 days of the week starting from start_date
+    # and set the task count to 0 for each day
+    week_days = {
+        (start_date + timedelta(days=i)).strftime("%Y-%m-%d"): 0 
+        for i in range(7)
+    }
     
+    # Assign the number of tasks for each day
+    for date in week_days:
+        tasks = api.get_tasks(filter=f"Due on {date}") # Get tasks for each day
+        week_days[date] = len(tasks) if tasks else 0
+        
+    return week_days
 
+def distribute_tasks(api: TodoistAPI, tasks: list, week_start_day: int) -> None:
+    """Distribute tasks evenly across the next week, accounting for existing tasks."""
+    if not tasks:
+        return
+
+    # Get next occurrence of start day
     today = datetime.now()
+    days_until_start = (week_start_day - 1 - today.weekday() + 7) % 7
+    next_week_start = today + timedelta(days=days_until_start)
+    
+    # Using a min heap ensures we always assign new tasks to the day with the least tasks
+    week_tasks = get_tasks_for_week(api, next_week_start)
+    task_heap = [(count, date) for date, count in week_tasks.items()]
+    heapq.heapify(task_heap)
 
-    # Adjust week_start_day to account for the shift from 0-based to 1-based
-    adjusted_week_start_day = week_start_day - 1
-
-    # Get the next instance of the start day of the week
-    next_start_day = today + timedelta(
-        (adjusted_week_start_day - today.weekday() + 7) % 7
-    )
-
-    # Generate the 7 days of next week starting from next_start_day
-    next_week_days = [next_start_day + timedelta(days=i) for i in range(7)]
-
-    # Return a dictionary where each key is a day of the next week and each value is the day of the week (1-7)
-    return {day.date().strftime("%Y-%m-%d"): i + 1 for i, day in enumerate(next_week_days)}
-
-def populate_next_week_dict_with_existing_tasks(api, next_week_day_dict):
-    """
-    Populate the next week day dictionary with the number of tasks that are already due on each day.
-    Will return another dictionary that looks something like this:
-    {
-        "2023-10-30": 1,
-        "2023-10-31": 2,
-        "2023-11-01": 3,
-        "2023-11-02": 4,
-        "2023-11-03": 5,
-        "2023-11-04": 6,
-        "2023-11-05": 7,
-    """
-    for day in next_week_day_dict.keys():
-        filter = f"Due on {day}"
-        next_week_day_dict[day] = len(get_tasks(api, filter=filter))
-    return next_week_day_dict
-
-
-def distribute_tasks(api, tasks, week_start_day):
-    """
-    Distribute tasks evenly across the next week starting from WEEK_START_DAY taking into account existing tasks.
-    """
-    next_week_day_dict = get_next_week_day_dict(week_start_day)
-    next_week_day_dict = populate_next_week_dict_with_existing_tasks(
-        api, next_week_day_dict
-    )
-
-    week_task_heap = [(count, day) for day, count in next_week_day_dict.items()]
-    heapq.heapify(week_task_heap)
-
-    # Assign tasks to the day with the lowest task count. Repeat until all tasks are assigned.
+    # Distribute tasks to days with lowest task count
     for task in tasks:
-        # Pop and return the smallest item from the heap
-        count, day = heapq.heappop(week_task_heap)
-        due_string = f"On {day}"
-        api.update_task(task.id, due_string=due_string)
-        count += 1
-        # Push the new task count back into the heap with one additional task
-        heapq.heappush(week_task_heap, (count, day))
-    return
+        count, date = heapq.heappop(task_heap)
+        api.update_task(task.id, due_string=f"On {date}")
+        heapq.heappush(task_heap, (count + 1, date))
 
+def main():
+    """Distribute tasks with no due date evenly across next week."""
+    api = TodoistAPI(os.getenv("TODOIST_API_KEY"))
+    tasks = api.get_tasks(filter="no date")
+    
+    if tasks:
+        distribute_tasks(api, tasks, get_start_day())
+        print(f"Successfully distributed {len(tasks)} tasks across the next week.")
 
 if __name__ == "__main__":
-    """
-    This script will attempt to evently distribute all tasks with no due date to the following week based on the WEEK_START_DAY.
-    that is set in the user's Todoist settings.
-    """
-    TODOIST_API_KEY = os.getenv("TODOIST_API_KEY") # Put your Todoist API key in a .env file in the same directory as this script
-    API = TodoistAPI(TODOIST_API_KEY)
-    WEEK_START_DAY = get_start_day()
-    TASKS = get_tasks(API, "no date & !##Alexa*")
-    if TASKS:
-        distribute_tasks(API, TASKS, WEEK_START_DAY)
-        print(f"Successfully distributed {len(TASKS)} tasks across the next week.")
+    main()
