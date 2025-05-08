@@ -6,6 +6,7 @@ name: Todoist Backlog Scheduler
 on:
   schedule:
     - cron: "0 21 * * 0" # Every Sunday at 9PM
+  workflow_dispatch:  # Allows manual triggering of the workflow
 
 
 env:
