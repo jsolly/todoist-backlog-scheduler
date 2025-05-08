@@ -1,2 +1,2 @@
-todoist-api-python
-python-dotenv
+todoist-api-python==3.1.0
+python-dotenv==1.0.1
