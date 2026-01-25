@@ -25,4 +25,19 @@ pip install -r requirements.txt
 ```shell
 python3 schedule_tasks.py
 ```
-  - I have also added a Github Actions file inside .github/workflows that will run the script every Sunday at 9PM. You can change the schedule by editing the cron expression in the file. If you want to go this route, add your TODOIST_API_KEY to your workflow secrets.
+
+## Automated Scheduling Options
+
+This project supports multiple ways to automatically run the scheduler:
+
+### GitHub Actions
+I have also added a Github Actions file inside `.github/workflows` that will run the script every Sunday at 9PM. You can change the schedule by editing the cron expression in the file. If you want to go this route, add your `TODOIST_API_KEY` to your workflow secrets.
+
+### Vercel Cron
+You can deploy this as a Vercel serverless function with cron scheduling:
+
+1. Deploy the project to Vercel (connect your GitHub repository or use the Vercel CLI)
+2. Add your `TODOIST_API_KEY` as an environment variable in the Vercel dashboard (Settings → Environment Variables)
+3. The cron job is configured in `vercel.json` to run every Sunday at 9PM (`0 21 * * 0`). You can customize the schedule by editing the cron expression in `vercel.json`.
+
+The API endpoint will be available at `/api/scheduled` and will be automatically called by Vercel's cron service according to the schedule. Both GitHub Actions and Vercel Cron use the same underlying code, ensuring consistent behavior.

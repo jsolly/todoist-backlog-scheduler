@@ -10,8 +10,6 @@ import dotenv
 import requests
 from todoist_api_python.api import TodoistAPI
 
-dotenv.load_dotenv()
-
 
 def get_start_day() -> int:
     """Get user's week start day setting from Todoist (1=Monday, 7=Sunday)."""
@@ -77,16 +75,43 @@ def distribute_tasks(api: TodoistAPI, tasks: list, week_start_day: int) -> None:
         heapq.heappush(task_heap, (count + 1, date))
 
 
-def main():
-    """Distribute tasks with no due date evenly across next week."""
-    api = TodoistAPI(os.getenv("TODOIST_API_KEY"))
+def run_scheduler(api_key: str = None) -> dict:
+    """
+    Distribute tasks with no due date evenly across next week.
+    
+    Args:
+        api_key: Optional API key. If not provided, will use TODOIST_API_KEY from environment.
+    
+    Returns:
+        dict with 'message' and 'tasks_distributed' keys
+    """
+    if api_key is None:
+        api_key = os.getenv("TODOIST_API_KEY")
+    
+    if not api_key:
+        raise ValueError("TODOIST_API_KEY not configured")
+    
+    api = TodoistAPI(api_key)
     tasks_paginator = api.filter_tasks(query="no date")
     all_pages = list(tasks_paginator)
     tasks = all_pages[0] if all_pages else []
 
     if tasks:
         distribute_tasks(api, tasks, get_start_day())
-        print(f"Successfully distributed {len(tasks)} tasks across the next week.")
+        message = f"Successfully distributed {len(tasks)} tasks across the next week."
+    else:
+        message = "No tasks with no date found to distribute."
+    
+    return {"message": message, "tasks_distributed": len(tasks)}
+
+
+def main():
+    """CLI entry point for distributing tasks with no due date evenly across next week."""
+    # Load .env file for local development
+    dotenv.load_dotenv()
+    
+    result = run_scheduler()
+    print(result["message"])
 
 
 if __name__ == "__main__":
