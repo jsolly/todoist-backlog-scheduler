@@ -5,3 +5,6 @@
 # MacOS
 .DS_Store
 .vercel
+
+# AWS SAM
+.aws-sam

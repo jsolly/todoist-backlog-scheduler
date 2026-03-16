@@ -26,18 +26,34 @@ pip install -r requirements.txt
 python3 schedule_tasks.py
 ```
 
-## Automated Scheduling Options
+## Scheduling Options
 
-This project supports multiple ways to automatically run the scheduler:
+### Local
+Run the script manually from the terminal:
+```shell
+python3 schedule_tasks.py
+```
+
+### AWS Lambda (Recommended)
+Deploy as a Lambda function triggered weekly by EventBridge, with the API key stored in SSM Parameter Store.
+
+1. Store your API key in SSM:
+   ```shell
+   aws ssm put-parameter --name "/todoist-backlog-scheduler/api-key" --type SecureString --value "<your-api-key>"
+   ```
+2. Build and deploy with SAM:
+   ```shell
+   sam build && sam deploy --guided
+   ```
+3. The function runs every Sunday at 9PM UTC. Logs are retained in CloudWatch for 30 days.
+
+To invoke manually:
+```shell
+aws lambda invoke --function-name <function-name> /dev/stdout
+```
 
 ### GitHub Actions
-I have also added a Github Actions file inside `.github/workflows` that will run the script every Sunday at 9PM. You can change the schedule by editing the cron expression in the file. If you want to go this route, add your `TODOIST_API_KEY` to your workflow secrets.
+A GitHub Actions workflow in `.github/workflows` runs the script every Sunday at 9PM. Add your `TODOIST_API_KEY` to your repository secrets. Note: GitHub disables scheduled workflows after 60 days of repository inactivity.
 
 ### Vercel Cron
-You can deploy this as a Vercel serverless function with cron scheduling:
-
-1. Deploy the project to Vercel (connect your GitHub repository or use the Vercel CLI)
-2. Add your `TODOIST_API_KEY` as an environment variable in the Vercel dashboard (Settings → Environment Variables)
-3. The cron job is configured in `vercel.json` to run every Sunday at 9PM (`0 21 * * 0`). You can customize the schedule by editing the cron expression in `vercel.json`.
-
-The API endpoint will be available at `/api/scheduled` and will be automatically called by Vercel's cron service according to the schedule. Both GitHub Actions and Vercel Cron use the same underlying code, ensuring consistent behavior.
+You can deploy this as a Vercel serverless function with cron scheduling. You'll need to restore the `api/scheduled.py` handler and `vercel.json` from git history, then add your `TODOIST_API_KEY` as an environment variable in the Vercel dashboard.

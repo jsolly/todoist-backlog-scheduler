@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Todoist Backlog Scheduler - distributes undated tasks across the week
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 128
+
+Parameters:
+  SSMParameterName:
+    Type: String
+    Default: /todoist-backlog-scheduler/api-key
+    Description: SSM Parameter Store path for the Todoist API key
+
+Resources:
+  SchedulerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: lambda_handler.handler
+      Runtime: python3.13
+      Environment:
+        Variables:
+          SSM_PARAMETER_NAME: !Ref SSMParameterName
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SSMParameterName}
+      Events:
+        WeeklySchedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 21 ? * SUN *)
+            Description: Run todoist backlog scheduler every Sunday at 9PM UTC
+
+  SchedulerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${SchedulerFunction}
+      RetentionInDays: 30
+
+Outputs:
+  SchedulerFunctionArn:
+    Description: Lambda function ARN
+    Value: !GetAtt SchedulerFunction.Arn

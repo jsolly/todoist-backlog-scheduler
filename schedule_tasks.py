@@ -14,7 +14,7 @@ from todoist_api_python.api import TodoistAPI
 def get_start_day() -> int:
     """Get user's week start day setting from Todoist (1=Monday, 7=Sunday)."""
     response = requests.get(
-        "https://api.todoist.com/API/v2/user",
+        "https://api.todoist.com/api/v1/user",
         headers={"Authorization": f"Bearer {os.getenv('TODOIST_API_KEY')}"},
     )
     return response.json()["start_day"]
@@ -93,8 +93,7 @@ def run_scheduler(api_key: str = None) -> dict:
     
     api = TodoistAPI(api_key)
     tasks_paginator = api.filter_tasks(query="no date")
-    all_pages = list(tasks_paginator)
-    tasks = all_pages[0] if all_pages else []
+    tasks = [task for page in tasks_paginator for task in page]
 
     if tasks:
         distribute_tasks(api, tasks, get_start_day())
