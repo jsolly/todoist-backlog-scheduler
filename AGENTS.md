@@ -15,7 +15,7 @@ sam deploy --guided            # First-time deploy with prompts
 
 **Todoist Backlog Scheduler** — recreates Todoist's discontinued "Smart Schedule" feature. Distributes undated tasks evenly across the upcoming week using a min-heap algorithm, respecting the user's configured week start day.
 
-**Stack:** Python 3.11, AWS Lambda (SAM), EventBridge (weekly cron), SSM Parameter Store, Todoist API.
+**Stack:** Python 3.13, AWS Lambda (SAM), EventBridge (weekly cron), SSM Parameter Store, CloudWatch Alarms + SNS (alerting), Todoist API.
 
 ### Key Files
 
@@ -26,7 +26,7 @@ sam deploy --guided            # First-time deploy with prompts
 
 ## Key Constraints
 
-- **Python 3.11** runtime (matches Lambda config in `template.yaml`)
+- **Python 3.13** runtime (matches Lambda config in `template.yaml`)
 - **AWS SAM** for all infrastructure — no other IaC tools
 - **SSM Parameter Store** for secrets — never hardcode API keys
 

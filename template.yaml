@@ -4,7 +4,7 @@ Description: Todoist Backlog Scheduler - distributes undated tasks across the we
 
 Globals:
   Function:
-    Timeout: 30
+    Timeout: 60
     MemorySize: 128
 
 Parameters:
@@ -25,10 +25,11 @@ Resources:
     Properties:
       Handler: lambda_handler.handler
       Runtime: python3.13
+      LoggingConfig:
+        LogFormat: JSON
       Environment:
         Variables:
           SSM_PARAMETER_NAME: !Ref SSMParameterName
-          ALERT_TOPIC_ARN: !Ref AlertTopicArn
           GIT_SHA: !Ref GitSha
       Policies:
         - Statement:
@@ -36,10 +37,6 @@ Resources:
               Action:
                 - ssm:GetParameter
               Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SSMParameterName}
-        - Statement:
-            - Effect: Allow
-              Action: sns:Publish
-              Resource: !Ref AlertTopicArn
       Events:
         WeeklySchedule:
           Type: Schedule
@@ -70,6 +67,8 @@ Resources:
       TreatMissingData: notBreaching
       AlarmActions:
         - !Ref AlertTopicArn
+      OKActions:
+        - !Ref AlertTopicArn
 
   SchedulerRuleFailureAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -87,6 +86,37 @@ Resources:
       ComparisonOperator: GreaterThanOrEqualToThreshold
       TreatMissingData: notBreaching
       AlarmActions:
+        - !Ref AlertTopicArn
+      OKActions:
+        - !Ref AlertTopicArn
+
+  ErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${SchedulerFunction}
+      FilterPattern: '{ $.level = "ERROR" }'
+      MetricTransformations:
+        - MetricNamespace: todoist-backlog-scheduler
+          MetricName: ErrorCount
+          MetricValue: "1"
+          DefaultValue: 0
+
+  ErrorLogAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: todoist-backlog-scheduler-error-logs
+      AlarmDescription: ERROR logged in todoist-backlog-scheduler Lambda
+      Namespace: todoist-backlog-scheduler
+      MetricName: ErrorCount
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref AlertTopicArn
+      OKActions:
         - !Ref AlertTopicArn
 
 Outputs:
