@@ -8,3 +8,6 @@
 
 # AWS SAM
 .aws-sam
+
+# Python
+*.pyc
