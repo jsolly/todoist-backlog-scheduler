@@ -29,8 +29,14 @@ Resources:
         LogFormat: JSON
       Environment:
         Variables:
-          TODOIST_API_KEY: !Sub '{{resolve:ssm:${SSMParameterName}}}'
+          SSM_PARAMETER_NAME: !Ref SSMParameterName
           GIT_SHA: !Ref GitSha
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SSMParameterName}
       Events:
         WeeklySchedule:
           Type: Schedule
