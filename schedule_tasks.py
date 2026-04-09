@@ -17,6 +17,7 @@ def get_start_day() -> int:
         "https://api.todoist.com/api/v1/user",
         headers={"Authorization": f"Bearer {os.getenv('TODOIST_API_KEY')}"},
     )
+    response.raise_for_status()
     return response.json()["start_day"]
 
 
@@ -44,11 +45,9 @@ def get_tasks_for_week(api: TodoistAPI, start_date: datetime) -> dict[str, int]:
 
     # Assign the number of tasks for each day
     for date in week_days:
-        tasks_paginator = api.filter_tasks(
-            query=f"Due on {date}"
-        )  # Get tasks for each day
-        tasks_list = list(tasks_paginator)
-        week_days[date] = len(tasks_list) if tasks_list else 0
+        tasks_paginator = api.filter_tasks(query=f"Due on {date}")
+        tasks = [task for page in tasks_paginator for task in page]
+        week_days[date] = len(tasks)
 
     return week_days
 
@@ -75,22 +74,12 @@ def distribute_tasks(api: TodoistAPI, tasks: list, week_start_day: int) -> None:
         heapq.heappush(task_heap, (count + 1, date))
 
 
-def run_scheduler(api_key: str = None) -> dict:
-    """
-    Distribute tasks with no due date evenly across next week.
-    
-    Args:
-        api_key: Optional API key. If not provided, will use TODOIST_API_KEY from environment.
-    
-    Returns:
-        dict with 'message' and 'tasks_distributed' keys
-    """
-    if api_key is None:
-        api_key = os.getenv("TODOIST_API_KEY")
-    
+def run_scheduler() -> dict:
+    """Distribute tasks with no due date evenly across next week."""
+    api_key = os.getenv("TODOIST_API_KEY")
     if not api_key:
         raise ValueError("TODOIST_API_KEY not configured")
-    
+
     api = TodoistAPI(api_key)
     tasks_paginator = api.filter_tasks(query="no date")
     tasks = [task for page in tasks_paginator for task in page]
