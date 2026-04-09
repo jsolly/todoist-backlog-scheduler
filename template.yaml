@@ -12,6 +12,12 @@ Parameters:
     Type: String
     Default: /todoist-backlog-scheduler/api-key
     Description: SSM Parameter Store path for the Todoist API key
+  AlertTopicArn:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /alert-hub/alert-topic-arn
+  GitSha:
+    Type: String
+    Default: unknown
 
 Resources:
   SchedulerFunction:
@@ -22,12 +28,18 @@ Resources:
       Environment:
         Variables:
           SSM_PARAMETER_NAME: !Ref SSMParameterName
+          ALERT_TOPIC_ARN: !Ref AlertTopicArn
+          GIT_SHA: !Ref GitSha
       Policies:
         - Statement:
             - Effect: Allow
               Action:
                 - ssm:GetParameter
               Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SSMParameterName}
+        - Statement:
+            - Effect: Allow
+              Action: sns:Publish
+              Resource: !Ref AlertTopicArn
       Events:
         WeeklySchedule:
           Type: Schedule
@@ -40,6 +52,42 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${SchedulerFunction}
       RetentionInDays: 30
+
+  SchedulerFunctionErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: SchedulerFunction threw / timed out / OOMed
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref SchedulerFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref AlertTopicArn
+
+  SchedulerRuleFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Weekly scheduler rule failed to invoke target
+      Namespace: AWS/Events
+      MetricName: FailedInvocations
+      Dimensions:
+        - Name: RuleName
+          Value: !Ref SchedulerFunctionWeeklySchedule
+      Statistic: Sum
+      Period: 3600
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref AlertTopicArn
 
 Outputs:
   SchedulerFunctionArn:
