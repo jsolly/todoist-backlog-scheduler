@@ -62,17 +62,94 @@ When the family-memory MCP is available, call `recall` (no args) at conversation
 - Use `--profile prod-admin` for all production AWS commands.
 - SSO profiles: `prod-admin` (730335616323, production), `general-admin` (541310242108), `amplify-admin`, `jsolly-sandbox`, `jsolly-dev`.
 
-## Lambda Logging (TL;DR)
+## Error Logging & alert-hub
 
-- alert-hub enricher is alarm passthrough only (no Logs Insights dependency): `~/code/alert-hub/aws/enricher/handler.py`.
-- Use the standard SAM copy-paste resources for Lambda log group + metric filter + dual alarms: `~/code/alert-hub/templates/lambda-logging.yaml`.
-- Node source of truth for structured logger shape and masking: `~/code/family-memory/src/shared/logging.ts`.
-- Python reference for runtime JSON logging pattern: `~/code/todoist-backlog-scheduler/template.yaml`.
-- Keep behavior pinned with logging contract tests (`level=error`, stable JSON shape, PII masked): `tests/logging-contract.test.ts` in Node repos.
+**Goal.** Every uncaught exception or `level=error` log entry from any personal-project Lambda lands in a single email inbox with the actual error text — no need to open CloudWatch.
+
+### Pipeline
+
+```
+Lambda (structured JSON logger)
+  -> CloudWatch Logs (/aws/lambda/<FunctionName>)
+  -> CloudWatch Alarm (AWS/Lambda Errors  AND  custom MetricFilter on level=error)
+  -> SNS topic (alert-hub-notifications, ARN at SSM /alert-hub/alert-topic-arn)
+  -> alert-hub Enricher Lambda (~/code/alert-hub/aws/enricher/handler.py)
+  -> Logs Insights pulls the matching log group's recent error lines
+  -> SES email with alarm header + extracted error summary + raw alarm JSON
+```
+
+The enricher is best-effort: a Logs Insights timeout or missing log group falls through to a plain passthrough email so an alarm is **never** silenced.
+
+### Downstream Lambda contract
+
+Every Lambda that publishes alarms to alert-hub must:
+
+1. **Use the structured logger.** Never `console.log`/`console.error` in app code.
+   - Node source of truth: `~/code/family-memory/src/shared/logging.ts` (port verbatim into other Node repos and keep them in sync). PII masking (phones/emails/tokens), sensitive-key redaction, stable JSON shape.
+   - Python: rely on the runtime's `LogFormat: JSON` and `logger.error()` / `logger.exception()`. Logger emits uppercase `"ERROR"` level.
+2. **Explicit `AWS::Logs::LogGroup`** named `/aws/lambda/<FunctionName>` with `RetentionInDays: 30`. Wire on the function via `LoggingConfig.LogGroup: !Ref <LogGroup>`.
+3. **Explicit `FunctionName`** on each `AWS::Serverless::Function` so the log group name is deterministic instead of `<stack>-<logical>-<hash>`. Hyphenated, repo-prefixed (`misc-notifications-morning-text`, `family-memory-memories`).
+4. **Do not set `LogFormat: JSON` on Node Lambdas** — the app-level logger already emits structured JSON; the runtime wrapper would double-wrap. Python Lambdas DO set `LogFormat: JSON` (no app-level logger).
+5. **Two alarms per Lambda, both wired to alert-hub** with `AlarmActions` AND `OKActions`:
+   - **(a) `AWS::CloudWatch::Alarm` on `AWS/Lambda Errors`** (FunctionName dimension). Catches crashes, timeouts, OOM. Always discoverable by the enricher.
+   - **(b) `AWS::Logs::MetricFilter` on `{ $.level = "error" }`** (Node) or `{ $.level = "ERROR" }` (Python) plus a custom-namespace alarm. Catches application-logged errors that didn't crash the invocation (e.g. swallowed per-recipient failure inside a `Promise.allSettled`).
+6. **Custom metric namespace must align with the Lambda function-name prefix** so the enricher's prefix discovery (`describe_log_groups(prefix=/aws/lambda/<namespace>)`) finds the right log groups. Example: namespace `family-memory` → matches log groups `/aws/lambda/family-memory-*`. Drift here breaks enrichment for the metric-filter alarm.
+7. **Logging contract test** (Node only — Python uses the runtime): `tests/logging-contract.test.ts` pins JSON shape, level values, and PII masking so the enricher's `extract_error_summary` keeps working.
+
+Copy-paste starter that satisfies the contract: `~/code/alert-hub/templates/lambda-logging.yaml`.
+
+### Logger usage
+
+```ts
+// Node — instantiate once per module with shared base context.
+const logger = createLogger({ job: "morning-text" });
+
+logger.info("Send claimed", { recipient: to, dateLocalIso });
+logger.warn("Failed to fetch iCloud calendar", { subsystem: "caldav" }, error);
+logger.error("Recipient send failed", { recipient: to }, error);
+```
+
+```py
+# Python — Lambda runtime renders this as JSON via LogFormat: JSON.
+logger.error("Failed to process record", extra={"recipient": to})
+logger.exception("Unexpected failure")  # includes traceback
+```
+
+`error` argument is serialized via `serializeError` (Node) — `error.name`, `error.message`, `error.cause`, full stack — which is what the alert-hub enricher's `extract_error_summary` reads to render the email's "Error log lines" block.
+
+### Logging levels (cross-repo)
+
+- `info` — expected business rejections (auth failures, invalid input, rate limits) and routine lifecycle events.
+- `warn` — early signals that could escalate to an error if ignored, or transient failures that the next retry / next scheduled invocation may recover from on its own.
+- `error` — the failure can't be fixed by a retry, or retries have already exhausted. The data is wrong, the operation can't complete, the parser rejected input we expected to parse.
+
+**Per-recipient / per-item error handling inside a fan-out:** wrap with `Promise.allSettled` (or equivalent), then **log each rejected reason at `error`** before re-throwing the aggregate. Lambda's runtime serializes only the top-level error message — without an explicit log-per-failure, the actual cause never reaches the enricher.
+
+### alert-hub side
+
+- **Enricher source:** `~/code/alert-hub/aws/enricher/handler.py`. Logs Insights query is `level = "error" or level = "ERROR"`, sorted desc, limit 20. Extraction parses Node tab-delimited JSON tail and Python-runtime JSON objects, surfacing `error.name + error.message` (or `stackTrace[:5]`).
+- **Discovery:** AWS/Lambda alarms → `/aws/lambda/<FunctionName>` (deterministic). Custom namespace alarms → `describe_log_groups(prefix=/aws/lambda/<namespace>)`. `AWS/Scheduler|AWS/SQS|AWS/Events` alarms skip enrichment by design (no per-namespace log group).
+- **Self-recursion guard:** any `AlarmName` containing `alert-hub` is passthrough-only, even on `OK` recovery. Prevents the enricher's own metric filter from looping.
+- **IAM:** enricher has `logs:StartQuery`, `logs:GetQueryResults`, `logs:DescribeLogGroups` on `*` because it serves arbitrary downstream stacks.
+
+### Adding a new project
+
+1. Resolve the topic ARN in the SAM template:
+   ```yaml
+   AlertTopicArn:
+     Type: AWS::SSM::Parameter::Value<String>
+     Default: /alert-hub/alert-topic-arn
+   ```
+2. Copy the relevant blocks from `~/code/alert-hub/templates/lambda-logging.yaml` (LogGroup + MetricFilter + both alarms).
+3. Pick a custom MetricNamespace that matches your Lambda function-name prefix.
+4. If publishing alerts directly from app code (not just via alarms), grant `sns:Publish` on `!Ref AlertTopicArn` to the function role.
+5. Use the structured logger and emit `level=error` for non-recoverable failures.
 
 ## User Context
 
-Software engineer turned CTO at Leidos (FedCiv DIGMOD). When exploring ideas or thinking through design, be discursive and collaborative — follow the thread, steel-man arguments, don't lecture. Prefer being challenged over being reassured. Surface things I haven't considered.
+Software engineer turned Sr. Director at Leidos (Health-IT under DIGMOD). I use this chat to think through ideas, explore topics, write code, and have real conversations.
+
+When exploring ideas, be discursive and collaborative — follow the thread wherever it goes, even if it gets uncomfortable. Steel-man arguments, don't lecture. When I'm vague, call it out directly. When my logic doesn't hold up, say so. I'd rather be challenged than reassured. I value extreme bluntness, the proactive surfacing of things I haven't considered, and getting closer to the truth over reaching a comfortable answer.
 
 ## Conversation Preferences
 
@@ -106,7 +183,10 @@ Common types: `feat`, `fix`, `chore`, `docs`, `style`, `refactor`, `test`, `perf
 - **Trust the type system**: Skip defensive null/undefined checks when strict TypeScript or DB constraints guarantee safety. Add checks only when values can legitimately be missing (parsed JSON, nullable columns, third-party payloads).
 - **Deterministic error checking**: Use structured error properties (`error.code`, `error.status`), not string matching (`.includes()`) on messages.
 - **Fail fast**: No silent fallbacks or default values on unexpected errors. If a fallback is needed for resilience, gate it on structured error properties and log with context.
-- **Logging levels**: Expected rejections (auth failures, invalid input, rate limits) → `info`, not `warn`/`error`. Reserve `warn`/`error` for genuine failures (DB errors, service outages).
+- **Logging levels**:
+  - `info` — expected business rejections (auth failures, invalid input, rate limits) and routine lifecycle events.
+  - `warn` — early signals that could escalate to an error if ignored, or transient failures that the next retry / next scheduled invocation may recover from on its own.
+  - `error` — the failure can't be fixed by a retry, or retries have already exhausted. The data is wrong, the operation can't complete, the parser rejected input we expected to parse.
 
 ## Testing Philosophy
 
