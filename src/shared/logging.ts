@@ -7,7 +7,13 @@
  * Writes raw JSON to stdout (debug/info) and stderr (warn/error). The Node Lambda
  * runtime ships both streams to CloudWatch; metric filters on `{ $.level = "error" }`
  * match the JSON regardless of any tab-prefix the runtime would otherwise add.
+ *
+ * Bypassing console.* loses the runtime's auto-prefixed awsRequestId; handlers
+ * should wrap their work in `runWithRequestContext(context.awsRequestId, fn)`
+ * so every log entry carries the invocation's requestId without DI plumbing.
  */
+import { AsyncLocalStorage } from "node:async_hooks";
+
 type LogLevel = "debug" | "info" | "warn" | "error";
 
 type LogContext = Record<string, unknown> & {
@@ -175,6 +181,17 @@ function safeJsonStringify(value: unknown, maskPiiEnabled: boolean): string {
 	});
 }
 
+const requestStore = new AsyncLocalStorage<{ requestId: string }>();
+
+/**
+ * Run `fn` with `requestId` available to every logger.* call inside it (including
+ * inside async work), so handlers do not need to thread requestId through DI.
+ * Call this at the Lambda handler entry point with `context.awsRequestId`.
+ */
+export function runWithRequestContext<T>(requestId: string, fn: () => T): T {
+	return requestStore.run({ requestId }, fn);
+}
+
 function buildEntry(
 	level: LogLevel,
 	message: string,
@@ -190,8 +207,10 @@ function buildEntry(
 		message,
 	};
 
-	if (requestId) {
-		entry.requestId = requestId;
+	const ambientRequestId = requestStore.getStore()?.requestId;
+	const effectiveRequestId = requestId ?? ambientRequestId;
+	if (effectiveRequestId) {
+		entry.requestId = effectiveRequestId;
 	}
 	if (Object.keys(rest).length > 0) {
 		entry.context = rest;

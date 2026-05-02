@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createLogger } from "../src/shared/logging";
+import { createLogger, runWithRequestContext } from "../src/shared/logging";
 
 function captureStderr() {
 	return vi.spyOn(process.stderr, "write").mockImplementation(() => true);
@@ -106,6 +106,43 @@ describe("logging contract", () => {
 		} finally {
 			stdoutSpy.mockRestore();
 			stderrSpy.mockRestore();
+		}
+	});
+
+	it("Lambda handler invocation propagates awsRequestId to module-scope logger calls", async () => {
+		const spy = captureStderr();
+		try {
+			const log = createLogger({ job: "contract-test" });
+			const requestId = "01HZX9P3KB7QH8M2NGY8KZRP4V";
+
+			await runWithRequestContext(requestId, async () => {
+				log.error("downstream failed", undefined, new Error("upstream 500"));
+				await new Promise((r) => setImmediate(r));
+				log.error("retry exhausted", undefined, new Error("giving up"));
+			});
+
+			const calls = spy.mock.calls.map(([chunk]) => JSON.parse(chunk as string));
+			expect(calls).toHaveLength(2);
+			expect(calls[0].requestId).toBe(requestId);
+			expect(calls[1].requestId).toBe(requestId);
+		} finally {
+			spy.mockRestore();
+		}
+	});
+
+	it("explicit requestId in call context overrides the ambient handler context", () => {
+		const spy = captureStderr();
+		try {
+			runWithRequestContext("ambient-id", () => {
+				createLogger({ job: "contract-test" }).error("audit event", {
+					requestId: "explicit-call-id",
+				});
+			});
+
+			const parsed = JSON.parse(lastWrite(spy));
+			expect(parsed.requestId).toBe("explicit-call-id");
+		} finally {
+			spy.mockRestore();
 		}
 	});
 });
