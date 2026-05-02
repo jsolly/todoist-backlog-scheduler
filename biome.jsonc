@@ -1,0 +1,51 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.4.14/schema.json",
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"defaultBranch": "main",
+		"useIgnoreFile": true
+	},
+	"files": {
+		"includes": ["src/**", "tests/**", "aws/src/**"]
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab",
+		"lineWidth": 100
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true,
+			"correctness": {
+				"noUnusedImports": "error",
+				"noUnusedVariables": "error"
+			},
+			"suspicious": {
+				"noConsole": "error",
+				"noEmptyBlockStatements": "error"
+			},
+			"style": {
+				"useThrowOnlyError": "error",
+				"noNonNullAssertion": "off"
+			},
+			"nursery": {
+				"noFloatingPromises": "error"
+			}
+		}
+	},
+	"overrides": [
+		{
+			"includes": ["tests/**"],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noConsole": "off",
+						"noEmptyBlockStatements": "off"
+					}
+				}
+			}
+		}
+	]
+}

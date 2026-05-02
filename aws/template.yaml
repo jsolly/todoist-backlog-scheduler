@@ -4,8 +4,11 @@ Description: Todoist Backlog Scheduler - distributes undated tasks across the we
 
 Globals:
   Function:
+    Runtime: nodejs24.x
+    Architectures:
+      - arm64
     Timeout: 60
-    MemorySize: 128
+    MemorySize: 256
 
 Parameters:
   SSMParameterName:
@@ -20,17 +23,35 @@ Parameters:
     Default: unknown
 
 Resources:
+  SchedulerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      # Hardcoded literal to break the circular dependency between the function's
+      # LoggingConfig.LogGroup and a !Sub on ${SchedulerFunction}. Must stay in
+      # lockstep with FunctionName below.
+      LogGroupName: /aws/lambda/todoist-backlog-scheduler
+      RetentionInDays: 30
+
   SchedulerFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Format: cjs
+        Target: node24
+        Sourcemap: true
+        EntryPoints:
+          - scheduler.ts
     Properties:
-      Handler: lambda_handler.handler
-      Runtime: python3.13
-      LoggingConfig:
-        LogFormat: JSON
+      FunctionName: todoist-backlog-scheduler
+      CodeUri: aws/src/handlers
+      Handler: scheduler.handler
       Environment:
         Variables:
           SSM_PARAMETER_NAME: !Ref SSMParameterName
           GIT_SHA: !Ref GitSha
+      LoggingConfig:
+        LogGroup: !Ref SchedulerLogGroup
       Policies:
         - Statement:
             - Effect: Allow
@@ -44,16 +65,11 @@ Resources:
             Schedule: cron(0 21 ? * SUN *)
             Description: Run todoist backlog scheduler every Sunday at 9PM UTC
 
-  SchedulerLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub /aws/lambda/${SchedulerFunction}
-      RetentionInDays: 30
-
-  SchedulerFunctionErrorAlarm:
+  SchedulerLambdaErrorsAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmDescription: SchedulerFunction threw / timed out / OOMed
+      AlarmName: todoist-backlog-scheduler-lambda-errors
+      AlarmDescription: SchedulerFunction crashed / timed out / OOMed
       Namespace: AWS/Lambda
       MetricName: Errors
       Dimensions:
@@ -70,17 +86,26 @@ Resources:
       OKActions:
         - !Ref AlertTopicArn
 
-  SchedulerRuleFailureAlarm:
+  SchedulerErrorLogFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref SchedulerLogGroup
+      FilterPattern: '{ $.level = "error" }'
+      MetricTransformations:
+        - MetricNamespace: todoist-backlog-scheduler
+          MetricName: ErrorLogCount
+          MetricValue: "1"
+          DefaultValue: 0
+
+  SchedulerErrorLogAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmDescription: Weekly scheduler rule failed to invoke target
-      Namespace: AWS/Events
-      MetricName: FailedInvocations
-      Dimensions:
-        - Name: RuleName
-          Value: !Ref SchedulerFunctionWeeklySchedule
+      AlarmName: todoist-backlog-scheduler-error-logs
+      AlarmDescription: error logged in todoist-backlog-scheduler Lambda
+      Namespace: todoist-backlog-scheduler
+      MetricName: ErrorLogCount
       Statistic: Sum
-      Period: 3600
+      Period: 300
       EvaluationPeriods: 1
       Threshold: 1
       ComparisonOperator: GreaterThanOrEqualToThreshold
@@ -90,26 +115,18 @@ Resources:
       OKActions:
         - !Ref AlertTopicArn
 
-  ErrorMetricFilter:
-    Type: AWS::Logs::MetricFilter
-    Properties:
-      LogGroupName: !Sub /aws/lambda/${SchedulerFunction}
-      FilterPattern: '{ $.level = "ERROR" }'
-      MetricTransformations:
-        - MetricNamespace: todoist-backlog-scheduler
-          MetricName: ErrorCount
-          MetricValue: "1"
-          DefaultValue: 0
-
-  ErrorLogAlarm:
+  SchedulerRuleFailureAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: todoist-backlog-scheduler-error-logs
-      AlarmDescription: ERROR logged in todoist-backlog-scheduler Lambda
-      Namespace: todoist-backlog-scheduler
-      MetricName: ErrorCount
+      AlarmName: todoist-backlog-scheduler-rule-failures
+      AlarmDescription: Weekly scheduler rule failed to invoke target
+      Namespace: AWS/Events
+      MetricName: FailedInvocations
+      Dimensions:
+        - Name: RuleName
+          Value: !Ref SchedulerFunctionWeeklySchedule
       Statistic: Sum
-      Period: 300
+      Period: 3600
       EvaluationPeriods: 1
       Threshold: 1
       ComparisonOperator: GreaterThanOrEqualToThreshold

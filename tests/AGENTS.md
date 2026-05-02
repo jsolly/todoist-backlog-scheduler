@@ -2,10 +2,12 @@
 
 ## Project test rules (this repository)
 
-- **Runtime:** Python 3.13 locally; CI workflow currently uses Python 3.11 for `schedule_tasks.py` only — align versions if you add a formal test job.
-- **Layout:** When pytest (or similar) is added, keep tests under `tests/` with names like `test_schedule_tasks.py` mirroring the module under test.
-- **Scenarios:** Frame tests around real scheduling outcomes (week boundaries, heap distribution, empty backlog) rather than abstract single-line unit checks unless the behavior is inherently atomic.
-- **Secrets:** Never commit Todoist API keys; use `.env` / CI secrets for anything that hits the network.
+- **Runtime:** Node 24, vitest. `npm test` runs the suite.
+- **Layout:** Tests live under `tests/` named after the scenario family (e.g. `scheduler.test.ts`), not 1:1 per source file.
+- **Scenarios:** Frame `describe`/`it` around real scheduling outcomes — week boundaries, heap distribution, empty backlog, week-start preference — not abstract single-line unit checks.
+- **External calls:** Stub `globalThis.fetch` for end-to-end paths that would otherwise hit Todoist. Pure logic (`distributeTasks`) takes a fake client object so the heap math is testable without any HTTP.
+- **Logger contract:** `tests/logging-contract.test.ts` and `tests/logging-snapshot.test.ts` are synced from `~/code/family-memory` and pin the structured-logger shape — do not edit them locally; re-sync via `~/code/family-memory/scripts/sync-shared-logger.sh sync`.
+- **Secrets:** Never commit Todoist API keys; use `.env` for local runs and SSM for the deployed Lambda.
 
 <!-- BEGIN GLOBAL TEST RULES (managed by sync-global-agents.sh) -->
 # Test Suite Architecture

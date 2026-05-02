@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -e
+
+error_handler() {
+  printf '\n\033[0;31m✗ Commit aborted: One or more checks failed.\033[0m\n'
+  printf 'Check the output above for details. Fix the issues, then try committing again.\n'
+}
+trap error_handler ERR
+
+echo "Ensuring staged files are linted/formatted..."
+npx lint-staged
+
+echo "Running checks..."
+npx biome ci . --error-on-warnings
+npm run check:ts
+npm run test
+if git diff --cached --name-only | grep -q '^aws/template\.yaml$'; then
+  echo "Validating SAM template..."
+  sam validate --lint --template-file aws/template.yaml
+fi

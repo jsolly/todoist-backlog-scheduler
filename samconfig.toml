@@ -1,8 +1,17 @@
 version = 0.1
 
-[default.deploy.parameters]
+[default.global.parameters]
 stack_name = "todoist-backlog-scheduler"
-resolve_s3 = true
-capabilities = "CAPABILITY_IAM"
-confirm_changeset = true
+region = "us-east-1"
+
+[default.build.parameters]
+template_file = "aws/template.yaml"
+# CodeUri paths in the template are relative to repo root so `sam build` can find
+# the shared src/ modules and the root package.json / node_modules.
+base_dir = "."
+
+[default.deploy.parameters]
 profile = "prod-admin"
+capabilities = "CAPABILITY_IAM"
+resolve_s3 = true
+confirm_changeset = true

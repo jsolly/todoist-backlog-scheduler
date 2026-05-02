@@ -1,59 +1,54 @@
 # Todoist Backlog Scheduler
+
 ## Introduction
+
 The Smart Schedule feature was a valuable asset in Todoist that helped many users efficiently manage their backlog of tasks. However, about three years ago, Todoist discontinued this feature, labeling it as 'overly complex' and not widely used.
 
-In an attempt to recreate the benefits of Smart Schedule, I've crafted a succinct Python script. Its core objective is to distribute undated tasks to days with fewer scheduled activities. The script interacts with Todoist to identify tasks under the 'no date' filter. It then thoughtfully allocates these tasks across the upcoming week, taking into account the number of tasks already scheduled for each day.
+To recreate the benefits of Smart Schedule, this project distributes undated tasks (Todoist's `no date` filter) across the upcoming week, biasing toward days that already have fewer tasks scheduled. The scheduler honors your Todoist `start_day` setting (Monday vs Sunday vs anything else), so the "upcoming week" lines up with how you already think about your week.
 
-For example, if you've set your 'week start day' to 'Monday' in the Todoist settings:
+The scheduler runs every Sunday at 21:00 UTC as an AWS Lambda invoked by EventBridge.
 
-Running this script will evenly distribute all your undated tasks from the following Monday through to the following Sunday.
+## Stack
 
-If this project aligns with your interests and you'd like to contribute or propose additional features, I'm open to any collaborative efforts.
+- TypeScript (Node 24, ES2024) on AWS Lambda (`arm64`)
+- AWS SAM for infrastructure (`aws/template.yaml`)
+- SSM Parameter Store for the Todoist API token
+- CloudWatch alarms wired to alert-hub for error notifications
+- Vitest + Biome + Husky for local quality gates
 
-## Installation
-1. Clone this repository
-2. run these commands in the root directory of the project.
-```shell
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+## Local development
+
+```bash
+npm install
+echo 'TODOIST_API_KEY=...' > .env  # only needed if you want to run the CLI
+npm test                            # vitest
+npm run check:ts                    # tsc --noEmit
+npx biome ci .                      # lint/format
 ```
 
-## Setup
-1. Rename `sample.env` to .env and add your Todoist key, which is in the [integration settings view](https://todoist.com/prefs/integrations) (Developer Tab) of your Todoist app.
-2. You can manually run the script like this in the terminal
-```shell
-python3 schedule_tasks.py
+To run the scheduler against your real Todoist account from the terminal:
+
+```bash
+TODOIST_API_KEY=... npm run scheduler
 ```
 
-## Scheduling Options
+## Deployment
 
-### Local
-Run the script manually from the terminal:
-```shell
-python3 schedule_tasks.py
-```
+1. Store the Todoist API key in SSM (one-time):
 
-### AWS Lambda (Recommended)
-Deploy as a Lambda function triggered weekly by EventBridge, with the API key stored in SSM Parameter Store.
-
-1. Store your API key in SSM:
-   ```shell
-   aws ssm put-parameter --name "/todoist-backlog-scheduler/api-key" --type SecureString --value "<your-api-key>"
+   ```bash
+   aws --profile prod-admin ssm put-parameter \
+     --name /todoist-backlog-scheduler/api-key \
+     --type SecureString \
+     --value '<your-api-key>'
    ```
-2. Build and deploy with SAM:
-   ```shell
-   sam build && sam deploy --guided
+
+2. Build and deploy:
+
+   ```bash
+   npm run deploy   # sam build && sam deploy
    ```
-3. The function runs every Sunday at 9PM UTC. Logs are retained in CloudWatch for 30 days.
 
-To invoke manually:
-```shell
-aws lambda invoke --function-name <function-name> /dev/stdout
-```
+   First-time deploys can use `sam deploy --guided` to populate `samconfig.toml` interactively.
 
-### GitHub Actions
-A GitHub Actions workflow in `.github/workflows` runs the script every Sunday at 9PM. Add your `TODOIST_API_KEY` to your repository secrets. Note: GitHub disables scheduled workflows after 60 days of repository inactivity.
-
-### Vercel Cron
-You can deploy this as a Vercel serverless function with cron scheduling. You'll need to restore the `api/scheduled.py` handler and `vercel.json` from git history, then add your `TODOIST_API_KEY` as an environment variable in the Vercel dashboard.
+The Lambda runs every Sunday at 21:00 UTC. CloudWatch logs are retained for 30 days. Errors fan out to john@jsolly.com via the alert-hub project.

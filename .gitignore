@@ -1,13 +1,10 @@
-.venv
+node_modules
 .env
 .vscode
-
-# MacOS
 .DS_Store
-.vercel
 
 # AWS SAM
 .aws-sam
 
-# Python
-*.pyc
+# Vitest / coverage
+coverage

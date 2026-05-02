@@ -5,31 +5,37 @@ Small personal utility with no users beyond the author — optimize for simplici
 ## Commands
 
 ```bash
-python schedule_tasks.py       # Run locally (uses .env for TODOIST_API_KEY)
-sam build                      # Build Lambda package
-sam deploy                     # Deploy to AWS
-sam deploy --guided            # First-time deploy with prompts
+npm install                       # First-time setup (also wires husky)
+TODOIST_API_KEY=... npm run scheduler   # Run the CLI locally against your real account
+npm test                          # vitest
+npm run check:ts                  # tsc --noEmit
+npx biome ci .                    # lint + format check
+npm run deploy                    # sam build && sam deploy
 ```
 
 ## Architecture
 
 **Todoist Backlog Scheduler** — recreates Todoist's discontinued "Smart Schedule" feature. Distributes undated tasks evenly across the upcoming week using a min-heap algorithm, respecting the user's configured week start day.
 
-**Stack:** Python 3.13, AWS Lambda (SAM), EventBridge (weekly cron), SSM Parameter Store, CloudWatch Alarms + SNS (alerting), Todoist API.
+**Stack:** TypeScript on Node 24 (arm64), AWS Lambda (SAM), EventBridge (weekly cron), SSM Parameter Store, CloudWatch Alarms + SNS (alerting), Todoist REST API v1.
 
 ### Key Files
 
-- `schedule_tasks.py` — Core scheduling logic (heap-based task distribution)
-- `lambda_handler.py` — AWS Lambda entry point (fetches API key from SSM, sets env var)
-- `template.yaml` — SAM/CloudFormation IaC definition
+- `src/scheduler.ts` — Core scheduling logic (heap-based task distribution)
+- `src/todoist.ts` — Thin Todoist REST v1 client (stdlib `fetch`)
+- `src/cli.ts` — Local CLI entry point (`npm run scheduler`)
+- `src/shared/logging.ts` — Synced from `~/code/family-memory`; do not edit directly
+- `aws/src/handlers/scheduler.ts` — Lambda entry point (resolves SSM, calls `runScheduler`)
+- `aws/template.yaml` — SAM/CloudFormation IaC definition
 - `samconfig.toml` — SAM CLI deployment config
 
 ## Key Constraints
 
-- **Python 3.13** runtime (matches Lambda config in `template.yaml`)
+- **Node 24 runtime, arm64** (matches Lambda config in `aws/template.yaml`)
 - **AWS SAM** for all infrastructure — no other IaC tools
 - **SSM Parameter Store** for secrets — never hardcode API keys
-- **`sam deploy`** after any change to **`template.yaml`** (SAM template lives at the repository root; synced rules that mention `aws/template.yaml` refer to other repos)
+- **`sam deploy`** after any change to **`aws/template.yaml`**
+- **Do not edit `src/shared/logging.ts` or `tests/logging-contract.test.ts` directly.** They're synced from `~/code/family-memory` by `~/code/family-memory/scripts/sync-shared-logger.sh sync`. The pre-commit hook fails if the snapshot hash drifts.
 
 ## Error Handling
 
@@ -38,9 +44,9 @@ sam deploy --guided            # First-time deploy with prompts
 
 ## Logging
 
-- **`LoggingConfig.LogFormat: JSON`** is set on `SchedulerFunction` in `template.yaml`. Python's Lambda runtime emits structured records (`level`, `timestamp`, `message`, `requestId`, `stackTrace`, `errorType`) automatically — use stdlib `logging` (`logger = logging.getLogger(__name__)`) and call `logger.error(...)` / `logger.exception(...)`. Never `print()`.
-- **`ErrorMetricFilter` + `ErrorLogAlarm`** in `template.yaml` watch `{ $.level = "ERROR" }` and fire via alert-hub on any logged error, alongside the `AWS/Lambda Errors` alarm that catches runtime crashes. Both are wired to the alert-hub SNS topic via SSM param `/alert-hub/alert-topic-arn` on `AlarmActions` + `OKActions`.
-- This repo is the canonical Python reference for the cross-repo Lambda logging pattern documented in `~/.agents/AGENTS.md` → "Lambda Logging". Node projects use a different approach (app-level JSON logger, no `LogFormat: JSON`) — see `~/code/family-memory` / `~/code/misc-notifications`.
+- **App-level structured JSON logger.** `import { createLogger } from "./shared/logging"` (or relative path from handlers). Never `console.log`/`console.error` in `src/**` — Biome's `noConsole: error` enforces this.
+- **No `LogFormat: JSON`** on the Lambda — the app emits the JSON line itself; the runtime wrapper would double-encode and break the metric filter.
+- **`SchedulerErrorLogFilter` + `SchedulerErrorLogAlarm`** in `aws/template.yaml` watch `{ $.level = "error" }` (lowercase, Node convention) and fire via alert-hub on any logged error, alongside the `SchedulerLambdaErrorsAlarm` (on `AWS/Lambda Errors`) that catches runtime crashes/timeouts/OOM. Both wire `AlarmActions` + `OKActions` to the alert-hub SNS topic via SSM param `/alert-hub/alert-topic-arn`.
 
 <!-- BEGIN GLOBAL RULES (managed by sync-global-agents.sh) -->
 ## Family Memory
@@ -49,7 +55,6 @@ When the family-memory MCP is available, call `recall` (no args) at conversation
 
 ## Collaboration
 
-- Use `--headed --persistent` when launching playwright-cli for interactive browser sessions. Without `--headed`, it defaults to headless.
 - No pull requests for personal projects. `/review-fix-push` skill is the sole review gate — reviews local changes against remote, fixes issues, commits and pushes.
 - Custom skills live at `~/.agents/skills/` (e.g., `~/.agents/skills/review-fix-push/SKILL.md`), not `.claude/plugins/`.
 - `~/.cursor/skills/` and `~/.claude/skills/` must be **real directories** (not symlinks to `~/.agents/skills/`). The `npx skills add` installer stores content in `~/.agents/skills/<name>/` then creates per-skill symlinks from each agent dir — directory-level symlinks cause circular links.
@@ -64,7 +69,7 @@ When the family-memory MCP is available, call `recall` (no args) at conversation
 
 ## Logging & alert-hub
 
-Every personal-project Lambda is wired to **alert-hub**: structured JSON logs, CloudWatch alarms on `AWS/Lambda Errors` + a `level=error` MetricFilter, both routed to an SNS topic that an enricher Lambda turns into an email with the actual error text. To learn the patterns (logger shape, SAM wiring, retry helper, fan-out error handling), look at existing repos before adding a new one: `~/code/alert-hub` (the hub), `~/code/misc-notifications` (Node logger + retry helper + contract test), `~/code/family-memory` (Node logger + contract test), `~/code/todoist-backlog-scheduler` (Python equivalent).
+Every personal-project Lambda routes errors to john@jsolly.com via **alert-hub** (`~/code/alert-hub`): CloudWatch alarms → shared SNS topic → enricher Lambda → SES email. Node Lambdas use the canonical structured logger at `~/code/family-memory/src/shared/logging.ts`, distributed by `~/code/family-memory/scripts/sync-shared-logger.sh`. When adding a Lambda, wiring alarms, or bootstrapping a new alert-hub-wired repo, use the `alert-hub-lambda-setup` skill — it owns the contract checklist + SAM snippet.
 
 ## User Context
 

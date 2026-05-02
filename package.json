@@ -1,0 +1,38 @@
+{
+  "name": "todoist-backlog-scheduler",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Distribute undated Todoist tasks evenly across the upcoming week",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "check:ts": "tsc --noEmit",
+    "check:biome": "biome check --write --no-errors-on-unmatched",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "scheduler": "tsx --env-file-if-exists=.env src/cli.ts",
+    "deploy": "sam build && sam deploy",
+    "prepare": "if [ -z \"$CI\" ]; then husky; fi"
+  },
+  "lint-staged": {
+    "**/*.{ts,json,md}": [
+      "biome check --write --no-errors-on-unmatched --files-ignore-unknown=true"
+    ]
+  },
+  "dependencies": {
+    "@aws-sdk/client-ssm": "^3.936.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.10",
+    "@types/aws-lambda": "^8.10.152",
+    "@types/node": "^24.7.2",
+    "esbuild": "^0.25.10",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.5"
+  }
+}
