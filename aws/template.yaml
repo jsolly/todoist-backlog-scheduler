@@ -100,7 +100,7 @@ Resources:
   SchedulerErrorLogAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: todoist-backlog-scheduler-error-logs
+      AlarmName: todoist-backlog-scheduler-error-log-count
       AlarmDescription: error logged in todoist-backlog-scheduler Lambda
       Namespace: todoist-backlog-scheduler
       MetricName: ErrorLogCount
