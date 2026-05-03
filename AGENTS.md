@@ -34,14 +34,14 @@ npm run deploy                    # sam build && sam deploy
 
 ## Logging
 
-- **App-level structured JSON logger.** `import { createLogger } from "./shared/logging"` (or relative path from handlers).
-- **Leave `LogFormat` unset** on the Lambda — the app emits the JSON line itself; the runtime wrapper would double-encode and break the metric filter.
-- **`SchedulerErrorLogFilter` + `SchedulerErrorLogAlarm`** in `aws/template.yaml` watch `{ $.level = "error" }` (lowercase, Node convention) and fire via alert-hub on any logged error, alongside the `SchedulerLambdaErrorsAlarm` (on `AWS/Lambda Errors`) that catches runtime crashes/timeouts/OOM. Both wire `AlarmActions` + `OKActions` to the alert-hub SNS topic via SSM param `/alert-hub/alert-topic-arn`.
+- App-level structured JSON logger. `import { createLogger } from "./shared/logging"` (or relative path from handlers).
+- Alarm names in `aws/template.yaml`: `SchedulerErrorLogFilter` + `SchedulerErrorLogAlarm` (custom-metric on `{ $.level = "error" }`) plus `SchedulerLambdaErrorsAlarm` (on `AWS/Lambda Errors`).
+- Conventions (logger sync, `LogFormat` unset, alert-hub SNS wiring): see `~/.agents/rules/aws.md`.
 
 ## Testing
 
 - **Runtime:** Node 24, vitest. `npm test` runs the suite.
 - **Layout:** Tests live under `tests/` named after the scenario family (e.g. `scheduler.test.ts`), not 1:1 per source file.
 - **External calls:** Stub `globalThis.fetch` for end-to-end paths that would otherwise hit Todoist. Pure logic (`distributeTasks`) takes a fake client object so the heap math is testable without any HTTP.
-- **Logger contract:** `tests/logging-contract.test.ts` and `tests/logging-snapshot.test.ts` are synced from `~/code/family-memory` and pin the structured-logger shape — re-sync via `~/code/family-memory/scripts/sync-shared-logger.sh sync` after edits.
+- **Logger contract:** `tests/logging-contract.test.ts` + `tests/logging-snapshot.test.ts` pin the structured-logger shape; re-sync after edits to the canonical (see Key Constraints).
 - **Secrets:** `.env` for local runs, SSM for the deployed Lambda.
