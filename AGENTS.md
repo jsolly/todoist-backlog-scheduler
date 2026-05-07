@@ -1,3 +1,5 @@
+@~/.agents/AGENTS.md
+
 ## Commands
 
 ```bash
