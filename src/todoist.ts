@@ -3,6 +3,7 @@ const API_BASE = "https://api.todoist.com/api/v1";
 export type TodoistTask = {
 	id: string;
 	content: string;
+	created_at: string;
 };
 
 type FilterTasksPage = {

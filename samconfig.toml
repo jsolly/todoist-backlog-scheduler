@@ -15,3 +15,5 @@ profile = "prod-admin"
 capabilities = "CAPABILITY_IAM"
 resolve_s3 = true
 confirm_changeset = true
+# Personal-deploy default; template's `Default: 0` (no limit) remains for non-default callers.
+parameter_overrides = "MaxTasksPerDay=5"

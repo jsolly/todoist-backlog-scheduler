@@ -51,21 +51,81 @@ export async function distributeTasks(
 	tasks: TodoistTask[],
 	weekStartDay: number,
 	now: Date = new Date(),
+	maxPerDay?: number,
 ): Promise<void> {
 	if (tasks.length === 0) {
 		return;
 	}
-	const weekStart = upcomingWeekStart(now, weekStartDay);
-	const buckets: DayBucket[] = Array.from(
-		await countExistingTasksByDay(client, weekStart),
-		([date, count]) => ({ date, count }),
-	);
 
-	for (const task of tasks) {
-		buckets.sort(lightestFirst);
-		const target = buckets[0] as DayBucket;
-		await client.updateTaskDueString(task.id, `On ${target.date}`);
-		target.count += 1;
+	const weekStart = upcomingWeekStart(now, weekStartDay);
+
+	if (maxPerDay === undefined) {
+		const buckets: DayBucket[] = Array.from(
+			await countExistingTasksByDay(client, weekStart),
+			([date, count]) => ({ date, count }),
+		);
+		for (const task of tasks) {
+			buckets.sort(lightestFirst);
+			const target = buckets[0] as DayBucket;
+			await client.updateTaskDueString(task.id, `On ${target.date}`);
+			target.count += 1;
+		}
+		return;
+	}
+
+	if (maxPerDay <= 0) {
+		throw new Error(`maxPerDay must be a positive integer, got ${maxPerDay}`);
+	}
+
+	const sorted = [...tasks].sort((a, b) => {
+		const aTime = Date.parse(a.created_at) || 0;
+		const bTime = Date.parse(b.created_at) || 0;
+		return aTime - bTime;
+	});
+	let remaining = sorted;
+	let weekNum = 0;
+
+	while (remaining.length > 0) {
+		const start = addDays(weekStart, weekNum * 7);
+		const buckets: DayBucket[] = Array.from(
+			await countExistingTasksByDay(client, start),
+			([date, count]) => ({ date, count }),
+		);
+
+		const capacity = buckets.reduce((sum, b) => sum + Math.max(0, maxPerDay - b.count), 0);
+		if (capacity === 0) {
+			weekNum++;
+			continue;
+		}
+
+		const batch = remaining.slice(0, capacity);
+		remaining = remaining.slice(capacity);
+
+		let taskIdx = 0;
+		let tasksLeft = batch.length;
+		let daysLeft = buckets.filter((b) => b.count < maxPerDay).length;
+
+		for (const bucket of buckets) {
+			const available = maxPerDay - bucket.count;
+			if (available <= 0) continue;
+			const allocation = Math.min(available, Math.ceil(tasksLeft / daysLeft));
+			for (let i = 0; i < allocation && taskIdx < batch.length; i++) {
+				const task = batch[taskIdx++]!;
+				await client.updateTaskDueString(task.id, `On ${bucket.date}`);
+			}
+			tasksLeft -= allocation;
+			daysLeft--;
+			if (tasksLeft <= 0) break;
+		}
+
+		// `ceil(tasksLeft/daysLeft)` allocation can under-place when later buckets
+		// are constrained (Sun has fewer free slots than its proportional share).
+		// Reinsert anything we couldn't place this week so it overflows naturally.
+		if (taskIdx < batch.length) {
+			remaining = [...batch.slice(taskIdx), ...remaining];
+		}
+
+		weekNum++;
 	}
 }
 
@@ -84,9 +144,11 @@ export async function runScheduler(now: Date = new Date()): Promise<SchedulerRes
 	}
 
 	const weekStartDay = await client.getStartDay();
-	await distributeTasks(client, tasks, weekStartDay, now);
+	const parsed = Number(process.env.MAX_TASKS_PER_DAY);
+	const maxPerDay = parsed > 0 ? parsed : undefined;
+	await distributeTasks(client, tasks, weekStartDay, now, maxPerDay);
 
-	const message = `Successfully distributed ${tasks.length} tasks across the next week.`;
+	const message = `Successfully distributed ${tasks.length} tasks starting from the next week.`;
 	logger.info("scheduler complete", { tasksDistributed: tasks.length, weekStartDay });
 	return { message, tasksDistributed: tasks.length };
 }
