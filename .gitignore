@@ -8,3 +8,6 @@ node_modules
 
 # Vitest / coverage
 coverage
+
+# editor (local symlinks to ~/.agents rules — machine-specific)
+.cursor/
