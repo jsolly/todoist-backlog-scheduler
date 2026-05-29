@@ -29,7 +29,7 @@ npm run deploy                    # sam build && sam deploy
 - `src/shared/logging.ts` — Synced from `~/code/family-memory`; do not edit directly
 - `aws/src/handlers/scheduler.ts` — Lambda entry point (resolves SSM, calls `runScheduler`)
 - `aws/template.yaml` — SAM/CloudFormation IaC definition
-- `samconfig.toml.example` → copy to gitignored `samconfig.toml`; credentials via `AWS_PROFILE` locally (see `~/.agents/rules/aws.md`)
+- `samconfig.toml.example` → copy to gitignored `samconfig.toml`; credentials via `AWS_PROFILE` locally (never commit profile names)
 
 ## Key Constraints
 
@@ -42,7 +42,7 @@ npm run deploy                    # sam build && sam deploy
 
 - App-level structured JSON logger. `import { createLogger } from "./shared/logging"` (or relative path from handlers).
 - Alarm names in `aws/template.yaml`: `SchedulerErrorLogFilter` + `SchedulerErrorLogAlarm` (custom-metric on `{ $.level = "error" }`) plus `SchedulerLambdaErrorsAlarm` (on `AWS/Lambda Errors`).
-- Conventions (logger sync, `LogFormat` unset, alert-hub SNS wiring): see `~/.agents/rules/aws.md`.
+- Conventions (logger sync, `LogFormat` unset, alert-hub SNS wiring): see `~/code/alert-hub/docs/adding-a-project.md`.
 
 ## Testing
 
