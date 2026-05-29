@@ -29,7 +29,7 @@ npm run deploy                    # sam build && sam deploy
 - `src/shared/logging.ts` — Synced from `~/code/family-memory`; do not edit directly
 - `aws/src/handlers/scheduler.ts` — Lambda entry point (resolves SSM, calls `runScheduler`)
 - `aws/template.yaml` — SAM/CloudFormation IaC definition
-- `samconfig.toml` — SAM CLI deployment config
+- `samconfig.toml.example` → copy to gitignored `samconfig.toml`; credentials via `AWS_PROFILE` locally (see `~/.agents/rules/aws.md`)
 
 ## Key Constraints
 

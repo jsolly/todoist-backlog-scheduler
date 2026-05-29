@@ -5,6 +5,7 @@ node_modules
 
 # AWS SAM
 .aws-sam
+samconfig.toml
 
 # Vitest / coverage
 coverage

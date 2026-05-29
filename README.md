@@ -82,7 +82,7 @@ TODOIST_API_KEY=... npm run scheduler
 1. Store the Todoist API key in SSM (one-time):
 
    ```bash
-   aws --profile prod-admin ssm put-parameter \
+   aws ssm put-parameter \
      --name /todoist-backlog-scheduler/api-key \
      --type SecureString \
      --value '<your-api-key>'
@@ -94,6 +94,6 @@ TODOIST_API_KEY=... npm run scheduler
    npm run deploy   # sam build && sam deploy
    ```
 
-   First-time deploys can use `sam deploy --guided` to populate `samconfig.toml` interactively.
+   First-time deploys: copy `samconfig.toml.example` → `samconfig.toml` (gitignored), or run `sam deploy --guided`. Set `AWS_PROFILE` locally for SSO.
 
 The Lambda runs every Sunday at 21:00 UTC. CloudWatch logs are retained for 30 days. Errors fan out to john@jsolly.com via the alert-hub project.
