@@ -100,7 +100,7 @@ git add -A && git commit -m "..." && git push   # CI rebuilds + publishes the fl
 
 Then in this repo: `./scripts/update-agents-subtree.sh` (local IDE sessions are nudged by the `sessionStart` hook when `FLEET.lock` is behind `dotagents/fleet`).
 
-**Note:** `.agents/` in this repo is **read-only** — pull-only. The `fleet` branch is published by dotagents CI from `~/.agents/`; editing `.agents/` here and pushing back upstream does not round-trip (the next CI publish overwrites it). Make fleet changes in `~/.agents/`.
+**Note:** `.agents/` in this repo is **read-only** — pull-only. The `fleet` branch is published by dotagents CI from `.agents/`; editing `.agents/` here and pushing back upstream does not round-trip (the next CI publish overwrites it). Make fleet changes in `.agents/`.
 
 ### FLEET.lock on pull requests
 
