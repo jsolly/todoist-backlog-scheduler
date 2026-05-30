@@ -59,7 +59,7 @@ sam deploy --parameter-overrides MaxTasksPerDay=5
 - AWS SAM for infrastructure (`aws/template.yaml`)
 - SSM Parameter Store for the Todoist API token
 - CloudWatch alarms wired to alert-hub for error notifications
-- Vitest + Biome + Husky for local quality gates
+- Vitest + Biome + native git hooks (`.git-hooks/`) for local quality gates
 
 ## Local development
 

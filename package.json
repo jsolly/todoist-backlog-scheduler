@@ -14,7 +14,7 @@
     "test:watch": "vitest",
     "scheduler": "tsx --env-file-if-exists=.env src/cli.ts",
     "deploy": "sam build && sam deploy",
-    "prepare": "if [ -z \"$CI\" ]; then husky; fi"
+    "prepare": "git config core.hooksPath .git-hooks"
   },
   "lint-staged": {
     "**/*.{ts,json,md}": [
@@ -29,7 +29,6 @@
     "@types/aws-lambda": "^8.10.152",
     "@types/node": "^24.7.2",
     "esbuild": "^0.25.10",
-    "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",

@@ -16,7 +16,7 @@ Cloud agents: see `.agents/docs/cloud-agents.md` (fleet layout, subtree updates)
 ## Commands
 
 ```bash
-npm install                       # First-time setup (also wires husky)
+npm install                       # First-time setup (configures git hooks via core.hooksPath)
 TODOIST_API_KEY=... npm run scheduler   # Run the CLI locally against your real account
 npm test                          # vitest
 npm run check:ts                  # tsc --noEmit
