@@ -14,7 +14,7 @@
     "test:watch": "vitest",
     "scheduler": "tsx --env-file-if-exists=.env src/cli.ts",
     "deploy": "sam build && sam deploy",
-    "prepare": "git config core.hooksPath .git-hooks"
+    "prepare": "if [ -z \"$CI\" ]; then git config core.hooksPath .git-hooks; fi"
   },
   "lint-staged": {
     "**/*.{ts,json,md}": [
