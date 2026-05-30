@@ -27,13 +27,54 @@ function upcomingWeekStart(today: Date, weekStartDay: number): Date {
 	return addDays(today, daysUntilStart);
 }
 
+function parseIsoDate(iso: string): Date {
+	if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+		throw new Error(`Invalid date (expected YYYY-MM-DD): ${iso}`);
+	}
+	return new Date(`${iso}T00:00:00Z`);
+}
+
+function inclusiveDayCount(start: Date, end: Date): number {
+	const msPerDay = 86_400_000;
+	return Math.floor((end.getTime() - start.getTime()) / msPerDay) + 1;
+}
+
+export type ScheduleRange = { start: Date; days: number };
+
+export function scheduleRangeFromEnv(): ScheduleRange | undefined {
+	const from = process.env.SCHEDULE_FROM;
+	if (!from) {
+		return undefined;
+	}
+	const start = parseIsoDate(from);
+	const to = process.env.SCHEDULE_TO;
+	const daysEnv = process.env.SCHEDULE_DAYS;
+	if (to && daysEnv) {
+		throw new Error("Set only one of SCHEDULE_TO or SCHEDULE_DAYS with SCHEDULE_FROM");
+	}
+	if (to) {
+		const end = parseIsoDate(to);
+		const days = inclusiveDayCount(start, end);
+		if (days <= 0) {
+			throw new Error(`SCHEDULE_TO must be on or after SCHEDULE_FROM (${from})`);
+		}
+		return { start, days };
+	}
+	const days = daysEnv ? Number(daysEnv) : 7;
+	if (!Number.isInteger(days) || days <= 0) {
+		throw new Error(`SCHEDULE_DAYS must be a positive integer, got ${daysEnv}`);
+	}
+	return { start, days };
+}
+
 async function countExistingTasksByDay(
 	client: TodoistClient,
-	weekStart: Date,
+	rangeStart: Date,
+	dayCount: number,
 ): Promise<Map<string, number>> {
 	const counts = new Map<string, number>();
-	for (let i = 0; i < 7; i++) {
-		const date = formatDate(addDays(weekStart, i));
+	for (let i = 0; i < dayCount; i++) {
+		const date = formatDate(addDays(rangeStart, i));
 		const tasks = await client.filterTasks(`Due on ${date}`);
 		counts.set(date, tasks.length);
 	}
@@ -52,16 +93,22 @@ export async function distributeTasks(
 	weekStartDay: number,
 	now: Date = new Date(),
 	maxPerDay?: number,
+	scheduleRange?: ScheduleRange,
 ): Promise<void> {
 	if (tasks.length === 0) {
 		return;
 	}
 
-	const weekStart = upcomingWeekStart(now, weekStartDay);
+	const rangeStart = scheduleRange?.start ?? upcomingWeekStart(now, weekStartDay);
+	const rangeDays = scheduleRange?.days ?? 7;
+
+	if (maxPerDay !== undefined && scheduleRange !== undefined) {
+		throw new Error("Custom SCHEDULE_FROM range is not supported with MAX_TASKS_PER_DAY");
+	}
 
 	if (maxPerDay === undefined) {
 		const buckets: DayBucket[] = Array.from(
-			await countExistingTasksByDay(client, weekStart),
+			await countExistingTasksByDay(client, rangeStart, rangeDays),
 			([date, count]) => ({ date, count }),
 		);
 		for (const task of tasks) {
@@ -86,9 +133,9 @@ export async function distributeTasks(
 	let weekNum = 0;
 
 	while (remaining.length > 0) {
-		const start = addDays(weekStart, weekNum * 7);
+		const start = addDays(rangeStart, weekNum * 7);
 		const buckets: DayBucket[] = Array.from(
-			await countExistingTasksByDay(client, start),
+			await countExistingTasksByDay(client, start, 7),
 			([date, count]) => ({ date, count }),
 		);
 
@@ -146,9 +193,20 @@ export async function runScheduler(now: Date = new Date()): Promise<SchedulerRes
 	const weekStartDay = await client.getStartDay();
 	const parsed = Number(process.env.MAX_TASKS_PER_DAY);
 	const maxPerDay = parsed > 0 ? parsed : undefined;
-	await distributeTasks(client, tasks, weekStartDay, now, maxPerDay);
+	const scheduleRange = scheduleRangeFromEnv();
+	await distributeTasks(client, tasks, weekStartDay, now, maxPerDay, scheduleRange);
 
-	const message = `Successfully distributed ${tasks.length} tasks starting from the next week.`;
-	logger.info("scheduler complete", { tasksDistributed: tasks.length, weekStartDay });
+	const rangeEnd = scheduleRange
+		? formatDate(addDays(scheduleRange.start, scheduleRange.days - 1))
+		: undefined;
+	const message = scheduleRange
+		? `Successfully distributed ${tasks.length} tasks from ${formatDate(scheduleRange.start)} through ${rangeEnd}.`
+		: `Successfully distributed ${tasks.length} tasks starting from the next week.`;
+	logger.info("scheduler complete", {
+		tasksDistributed: tasks.length,
+		weekStartDay,
+		scheduleFrom: scheduleRange ? formatDate(scheduleRange.start) : undefined,
+		scheduleDays: scheduleRange?.days,
+	});
 	return { message, tasksDistributed: tasks.length };
 }

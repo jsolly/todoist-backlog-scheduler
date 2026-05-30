@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { distributeTasks, runScheduler } from "../src/scheduler.ts";
+import { distributeTasks, runScheduler, scheduleRangeFromEnv } from "../src/scheduler.ts";
 import type { TodoistClient, TodoistTask } from "../src/todoist.ts";
 
 type FakeTodoistClient = Pick<TodoistClient, "getStartDay" | "filterTasks" | "updateTaskDueString">;
@@ -365,6 +365,39 @@ describe("Todoist backlog scheduler", () => {
 		} finally {
 			globalThis.fetch = realFetch;
 			delete process.env.TODOIST_API_KEY;
+		}
+	});
+
+	it("spreads undated tasks across a custom SCHEDULE_FROM range", async () => {
+		const { client, dueOn } = makeFakeClient({});
+		const tasks: TodoistTask[] = [
+			{ id: "801", content: "plan camping trip", created_at: "2026-05-01T10:00:00Z" },
+			{ id: "802", content: "renew car registration", created_at: "2026-05-02T10:00:00Z" },
+			{ id: "803", content: "book July flights", created_at: "2026-05-03T10:00:00Z" },
+		];
+		const range = { start: new Date("2026-06-09T00:00:00Z"), days: 15 };
+		await distributeTasks(client, tasks, 1, new Date("2026-05-30T12:00:00Z"), undefined, range);
+
+		const window = dateRange("2026-06-09", 15);
+		expect([...dueOn.values()].every((d) => window.includes(d))).toBe(true);
+		expect(new Set(dueOn.values()).size).toBe(3);
+	});
+
+	it("derives inclusive day count from SCHEDULE_FROM and SCHEDULE_TO", () => {
+		const previousFrom = process.env.SCHEDULE_FROM;
+		const previousTo = process.env.SCHEDULE_TO;
+		process.env.SCHEDULE_FROM = "2026-06-09";
+		process.env.SCHEDULE_TO = "2026-06-23";
+		try {
+			expect(scheduleRangeFromEnv()).toEqual({
+				start: new Date("2026-06-09T00:00:00Z"),
+				days: 15,
+			});
+		} finally {
+			if (previousFrom === undefined) delete process.env.SCHEDULE_FROM;
+			else process.env.SCHEDULE_FROM = previousFrom;
+			if (previousTo === undefined) delete process.env.SCHEDULE_TO;
+			else process.env.SCHEDULE_TO = previousTo;
 		}
 	});
 
