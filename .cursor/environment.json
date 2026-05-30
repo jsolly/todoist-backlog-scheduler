@@ -1,5 +1,5 @@
 {
-  "install": "npm ci",
+  "install": "bash scripts/cloud-agent-install.sh",
   "start": "echo 'Cloud agent env ready'",
   "agentCanUpdateSnapshot": true
 }

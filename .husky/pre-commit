@@ -11,6 +11,7 @@ echo "Ensuring staged files are linted/formatted..."
 npx lint-staged
 
 echo "Running checks..."
+bash .agents/scripts/check-biome-rules.sh biome.jsonc
 npx biome ci . --error-on-warnings
 npm run check:ts
 npm run test

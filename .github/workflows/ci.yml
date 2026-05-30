@@ -24,6 +24,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Guard Biome rules contract
+        run: bash .agents/scripts/check-biome-rules.sh biome.jsonc
+
+      - name: Biome check
+        run: npx biome ci . --error-on-warnings
+
       - name: TypeScript check
         run: npm run check:ts
 
