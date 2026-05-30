@@ -138,7 +138,7 @@ git add -A && git commit -m "..." && git push   # CI rebuilds + publishes the fl
 
 Then sync into this repo via cloud task start or `update-agents-subtree.sh`.
 
-**Note:** `.agents/` in this repo is **read-only** — pull-only. The `fleet` branch is published by dotagents CI from `~/.agents/`; editing `.agents/` here and pushing back upstream does not round-trip (the next CI publish overwrites it). Make fleet changes in `~/.agents/`.
+**Note:** `.agents/` in this repo is **read-only** — pull-only. The `fleet` branch is published by dotagents CI from `.agents/`; editing `.agents/` here and pushing back upstream does not round-trip (the next CI publish overwrites it). Make fleet changes in `.agents/`.
 
 ### Secrets summary
 
