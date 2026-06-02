@@ -145,4 +145,20 @@ describe("logging contract", () => {
 			spy.mockRestore();
 		}
 	});
+
+	it("scheduler primary failure path includes top-level error for alert-hub", () => {
+		const spy = captureStderr();
+		try {
+			createLogger({ job: "scheduler" }).error(
+				"todoist_backlog_sync_failed",
+				{ projectId: "123" },
+				new Error("Todoist API 503"),
+			);
+			const parsed = JSON.parse(lastWrite(spy));
+			expect(parsed.message).toBe("todoist_backlog_sync_failed");
+			expect(parsed.error).toMatchObject({ message: "Todoist API 503" });
+		} finally {
+			spy.mockRestore();
+		}
+	});
 });
