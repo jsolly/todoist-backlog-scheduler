@@ -22,7 +22,12 @@ export const handler: Handler<unknown, { statusCode: number; body: string }> = (
 		}
 		process.env.TODOIST_API_KEY = apiKey;
 
-		const result = await runScheduler();
-		logger.info("handler complete", { tasksDistributed: result.tasksDistributed });
-		return { statusCode: 200, body: JSON.stringify(result) };
+		try {
+			const result = await runScheduler();
+			logger.info("handler complete", { tasksDistributed: result.tasksDistributed });
+			return { statusCode: 200, body: JSON.stringify(result) };
+		} catch (error) {
+			logger.error("todoist_backlog_sync_failed", {}, error);
+			throw error;
+		}
 	});
