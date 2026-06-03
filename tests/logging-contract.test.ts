@@ -146,17 +146,49 @@ describe("logging contract", () => {
 		}
 	});
 
-	it("scheduler primary failure path includes top-level error for alert-hub", () => {
+	it("request_failed shape includes top-level error for alert-hub", () => {
 		const spy = captureStderr();
 		try {
-			createLogger({ job: "scheduler" }).error(
-				"todoist_backlog_sync_failed",
-				{ projectId: "123" },
-				new Error("Todoist API 503"),
+			createLogger({ job: "memories" }).error(
+				"request_failed",
+				{ route: "/api/memories" },
+				new Error("upstream 500"),
 			);
 			const parsed = JSON.parse(lastWrite(spy));
-			expect(parsed.message).toBe("todoist_backlog_sync_failed");
-			expect(parsed.error).toMatchObject({ message: "Todoist API 503" });
+			expect(parsed.message).toBe("request_failed");
+			expect(parsed.error).toMatchObject({ message: "upstream 500" });
+		} finally {
+			spy.mockRestore();
+		}
+	});
+
+	it("ingestion_failed shape includes top-level error for alert-hub", () => {
+		const spy = captureStderr();
+		try {
+			createLogger({ job: "ingest" }).error(
+				"ingestion_failed",
+				{ objectKey: "uploads/photo.jpg" },
+				new Error("S3 object missing"),
+			);
+			const parsed = JSON.parse(lastWrite(spy));
+			expect(parsed.message).toBe("ingestion_failed");
+			expect(parsed.error.message).toBe("S3 object missing");
+		} finally {
+			spy.mockRestore();
+		}
+	});
+
+	it("migration_write_failed shape includes top-level error for alert-hub", () => {
+		const spy = captureStderr();
+		try {
+			createLogger({ job: "maintain" }).error(
+				"migration_write_failed",
+				{ migration: "20260501_add_column" },
+				new Error("permission denied for table memories"),
+			);
+			const parsed = JSON.parse(lastWrite(spy));
+			expect(parsed.message).toBe("migration_write_failed");
+			expect(parsed.error.message).toContain("permission denied");
 		} finally {
 			spy.mockRestore();
 		}

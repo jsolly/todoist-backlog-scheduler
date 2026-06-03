@@ -67,7 +67,16 @@ export async function distributeTasks(
 		for (const task of tasks) {
 			buckets.sort(lightestFirst);
 			const target = buckets[0] as DayBucket;
-			await client.updateTaskDueString(task.id, `On ${target.date}`);
+			try {
+				await client.updateTaskDueString(task.id, `On ${target.date}`);
+			} catch (error) {
+				logger.error(
+					"Failed to update task due date",
+					{ taskId: task.id, targetDate: target.date, failurePhase: "todoist-update" },
+					error,
+				);
+				throw error;
+			}
 			target.count += 1;
 		}
 		return;
@@ -111,7 +120,20 @@ export async function distributeTasks(
 			const allocation = Math.min(available, Math.ceil(tasksLeft / daysLeft));
 			for (let i = 0; i < allocation && taskIdx < batch.length; i++) {
 				const task = batch[taskIdx++]!;
-				await client.updateTaskDueString(task.id, `On ${bucket.date}`);
+				try {
+					await client.updateTaskDueString(task.id, `On ${bucket.date}`);
+				} catch (error) {
+					logger.error(
+						"Failed to update task due date",
+						{
+							taskId: task.id,
+							targetDate: bucket.date,
+							failurePhase: "todoist-update",
+						},
+						error,
+					);
+					throw error;
+				}
 			}
 			tasksLeft -= allocation;
 			daysLeft--;
@@ -146,7 +168,15 @@ export async function runScheduler(now: Date = new Date()): Promise<SchedulerRes
 	const weekStartDay = await client.getStartDay();
 	const parsed = Number(process.env.MAX_TASKS_PER_DAY);
 	const maxPerDay = parsed > 0 ? parsed : undefined;
-	await distributeTasks(client, tasks, weekStartDay, now, maxPerDay);
+	const taskCount = tasks.length;
+	try {
+		await distributeTasks(client, tasks, weekStartDay, now, maxPerDay);
+	} catch (error) {
+		if (error instanceof Error) {
+			(error as Error & { taskCount?: number }).taskCount = taskCount;
+		}
+		throw error;
+	}
 
 	const message = `Successfully distributed ${tasks.length} tasks starting from the next week.`;
 	logger.info("scheduler complete", { tasksDistributed: tasks.length, weekStartDay });

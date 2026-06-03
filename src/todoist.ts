@@ -1,4 +1,8 @@
+import { payloadLogFields, preparePayloadForLog } from "./shared/log-payload.ts";
+import { createLogger } from "./shared/logging.ts";
+
 const API_BASE = "https://api.todoist.com/api/v1";
+const logger = createLogger({ job: "todoist-backlog-scheduler", subsystem: "todoist-api" });
 
 export type TodoistTask = {
 	id: string;
@@ -40,7 +44,19 @@ export class TodoistClient {
 			},
 		});
 		if (!response.ok) {
-			throw new TodoistApiError(method, path, response.status);
+			const bodyText = await response.text();
+			const err = new TodoistApiError(method, path, response.status);
+			logger.error(
+				"Todoist API request failed",
+				{
+					method,
+					path,
+					status: response.status,
+					...payloadLogFields(preparePayloadForLog(bodyText), "responseBody"),
+				},
+				err,
+			);
+			throw err;
 		}
 		return response.json() as Promise<T>;
 	}

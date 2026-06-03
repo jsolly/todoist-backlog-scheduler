@@ -13,21 +13,42 @@ export const handler: Handler<unknown, { statusCode: number; body: string }> = (
 			throw new Error("SSM_PARAMETER_NAME not configured");
 		}
 
-		const response = await ssm.send(
-			new GetParameterCommand({ Name: parameterName, WithDecryption: true }),
-		);
-		const apiKey = response.Parameter?.Value;
-		if (!apiKey) {
-			throw new Error(`SSM parameter ${parameterName} returned no value`);
+		try {
+			const response = await ssm.send(
+				new GetParameterCommand({ Name: parameterName, WithDecryption: true }),
+			);
+			const apiKey = response.Parameter?.Value;
+			if (!apiKey) {
+				throw new Error(`SSM parameter ${parameterName} returned no value`);
+			}
+			process.env.TODOIST_API_KEY = apiKey;
+		} catch (error) {
+			logger.error(
+				"todoist_backlog_sync_failed",
+				{ failurePhase: "ssm", ssmParameterName: parameterName },
+				error,
+			);
+			throw error;
 		}
-		process.env.TODOIST_API_KEY = apiKey;
 
 		try {
 			const result = await runScheduler();
 			logger.info("handler complete", { tasksDistributed: result.tasksDistributed });
 			return { statusCode: 200, body: JSON.stringify(result) };
 		} catch (error) {
-			logger.error("todoist_backlog_sync_failed", {}, error);
+			const taskCount =
+				error instanceof Error && "taskCount" in error
+					? (error as Error & { taskCount?: number }).taskCount
+					: undefined;
+			logger.error(
+				"todoist_backlog_sync_failed",
+				{
+					taskCount,
+					failurePhase: "scheduler",
+					ssmParameterName: parameterName,
+				},
+				error,
+			);
 			throw error;
 		}
 	});
