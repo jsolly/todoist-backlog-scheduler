@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # BEGIN dotagents fleet pre-commit guard
 ROOT="$(git rev-parse --show-toplevel)"
 if [ -x "$ROOT/.agents/scripts/fleet-precommit-check.sh" ]; then
   bash "$ROOT/.agents/scripts/fleet-precommit-check.sh" || exit 1
 fi
 # END dotagents fleet pre-commit guard
-
-set -e
 
 error_handler() {
   printf '\n\033[0;31m✗ Commit aborted: One or more checks failed.\033[0m\n'
@@ -18,7 +18,11 @@ echo "Ensuring staged files are linted/formatted..."
 npx lint-staged
 
 echo "Running checks..."
-bash .agents/scripts/check-biome-rules.sh biome.jsonc
+if [[ -f biome.jsonc ]]; then
+  bash .agents/scripts/check-biome-rules.sh biome.jsonc
+elif [[ -f biome.json ]]; then
+  bash .agents/scripts/check-biome-rules.sh biome.json
+fi
 npx biome ci . --error-on-warnings
 npm run check:ts
 npm run test
