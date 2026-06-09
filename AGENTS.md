@@ -1,11 +1,7 @@
-## Cursor Cloud
-
-Cloud agents: see `.agents/docs/cloud-agents.md` (fleet layout, subtree updates).
-
 ## Cursor Cloud specific instructions
 
 - **First-time VM setup:** `bash scripts/cloud-agent-install.sh` (Node 24 via nvm, `npm ci`, AWS SAM CLI). Cursor’s `.cursor/environment.json` runs the same install hook on fresh VMs.
-- **PATH / Node:** Cloud VMs may expose a system Node 22 before nvm’s Node 24. If `node -v` is not 24.x, re-run `scripts/cloud-agent-install.sh` or open a new shell after install (see `.agents/scripts/cloud-install-lib.sh`).
+- **PATH / Node:** Cloud VMs may expose a system Node 22 before nvm’s Node 24. If `node -v` is not 24.x, re-run `scripts/cloud-agent-install.sh` or open a new shell after install.
 - **No dev servers:** This repo has no web UI or long-running app. Verification is `npm test`, `npm run check:ts`, and `npx biome ci .` (see Commands below).
 - **Scheduler CLI:** `npm run scheduler` needs `TODOIST_API_KEY` in `.env` or the environment; it calls the live Todoist API. Tests stub `fetch` / fake clients — no Todoist token required for `npm test`.
 - **SAM:** `sam validate --lint --template-file aws/template.yaml` from repo root. `sam build` / `npm run deploy` need repo-root `node_modules` (`npm ci` first). If `sam build` cannot find esbuild, ensure `node_modules/.bin` is on `PATH` (plain `npm run deploy` does this automatically).
