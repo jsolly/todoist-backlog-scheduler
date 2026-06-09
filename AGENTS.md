@@ -1,5 +1,3 @@
-@.agents/AGENTS.md
-
 ## Cursor Cloud
 
 Cloud agents: see `.agents/docs/cloud-agents.md` (fleet layout, subtree updates).
