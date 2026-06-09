@@ -1,4 +1,4 @@
 {
-  "install": "bash scripts/cloud-agent-install.sh",
+  "install": "bash scripts/bootstrap-repo-fleet.sh && bash scripts/cloud-agent-install.sh",
   "start": "echo 'Cloud agent env ready'"
 }
