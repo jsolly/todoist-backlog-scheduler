@@ -1,4 +1,4 @@
-# alert-hub operator emails
+# shared-infra operator emails
 
 todoist-backlog-scheduler uses explicit log groups, metric filters, and alarm names in `aws/template.yaml`.
 
@@ -10,7 +10,7 @@ todoist-backlog-scheduler uses explicit log groups, metric filters, and alarm na
 | `todoist-backlog-scheduler-lambda-errors` | `log:` or `log-search:` for the scheduler function |
 | `todoist-backlog-scheduler-rule-failures` | Passthrough (`AWS/Events`) — short reason only |
 
-Contract: `tests/logging-contract.test.ts`. Architecture: `~/code/alert-hub/docs/architecture.md`.
+Contract: `tests/logging-contract.test.ts`. Architecture: `~/code/shared-infra/docs/architecture.md`.
 
 ## Logging
 
@@ -20,7 +20,7 @@ For large or sensitive payloads, use `preparePayloadForLog` + `payloadLogFields`
 
 ### Agent email lookup
 
-Enriched alarms include lookup lines (`region`, `account`, `alarm-name`, `log-group`, `time-start` / `time-end`, `insights-query`, optional `insights-query-request`). When no error line is found, expect `log-groups` plus lookup metadata. Playbook: `~/code/alert-hub/docs/architecture.md` → **Agent log lookup playbook**.
+Enriched alarms include lookup lines (`region`, `account`, `alarm-name`, `log-group`, `time-start` / `time-end`, `insights-query`, optional `insights-query-request`). When no error line is found, expect `log-groups` plus lookup metadata. Playbook: `~/code/shared-infra/docs/architecture.md` → **Agent log lookup playbook**.
 
 ### Expected context fields
 

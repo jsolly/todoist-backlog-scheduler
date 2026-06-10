@@ -45,7 +45,7 @@ npm run deploy                    # sam build && sam deploy
 
 - App-level structured JSON logger. `import { createLogger } from "./shared/logging"` (or relative path from handlers).
 - Alarm names in `aws/template.yaml`: `SchedulerErrorLogFilter` + `SchedulerErrorLogAlarm` (custom-metric on `{ $.level = "error" }`) plus `SchedulerLambdaErrorsAlarm` (on `AWS/Lambda Errors`).
-- Conventions (logger sync, `LogFormat` unset, alert-hub SNS wiring): see `~/code/alert-hub/docs/adding-a-project.md`.
+- Conventions (logger sync, `LogFormat` unset, shared-infra SNS wiring): see `~/code/shared-infra/docs/adding-a-project.md`.
 
 ## Testing
 
@@ -54,3 +54,7 @@ npm run deploy                    # sam build && sam deploy
 - **External calls:** Stub `globalThis.fetch` for end-to-end paths that would otherwise hit Todoist. Pure logic (`distributeTasks`) takes a fake client object so the heap math is testable without any HTTP.
 - **Logger contract:** `tests/logging-contract.test.ts` + `tests/logging-snapshot.test.ts` pin the structured-logger shape; re-sync after edits to the canonical (see Key Constraints).
 - **Secrets:** `.env` for local runs, SSM for the deployed Lambda.
+
+## Deploy model (agent-scoped)
+
+Routine **code-only** Lambda deploys: `npm run deploy:code` — runs `lambda update-function-code` under the scoped `agent-deploy` role (`AWS_PROFILE=fleet-deploy` locally via gitignored `.env.local`/shell; Cursor cloud agents use `CURSOR_AWS_ASSUME_IAM_ROLE_ARN`). The role cannot create or mutate infrastructure (explicit IAM deny). **Infra/template changes** require a full `sam deploy` with admin SSO creds on the laptop.

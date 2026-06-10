@@ -11,13 +11,13 @@ Globals:
     MemorySize: 256
 
 Parameters:
-  SSMParameterName:
+  TodoistApiKey:
     Type: String
-    Default: /todoist-backlog-scheduler/api-key
-    Description: SSM Parameter Store path for the Todoist API key
+    NoEcho: true
+    Description: Todoist API key (set via parameter_overrides in gitignored samconfig.toml)
   AlertTopicArn:
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /alert-hub/alert-topic-arn
+    Default: /shared-infra/alert-topic-arn
   MaxTasksPerDay:
     Type: Number
     Default: 0
@@ -52,17 +52,11 @@ Resources:
       Handler: scheduler.handler
       Environment:
         Variables:
-          SSM_PARAMETER_NAME: !Ref SSMParameterName
+          TODOIST_API_KEY: !Ref TodoistApiKey
           MAX_TASKS_PER_DAY: !Ref MaxTasksPerDay
           GIT_SHA: !Ref GitSha
       LoggingConfig:
         LogGroup: !Ref SchedulerLogGroup
-      Policies:
-        - Statement:
-            - Effect: Allow
-              Action:
-                - ssm:GetParameter
-              Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SSMParameterName}
       Events:
         WeeklySchedule:
           Type: Schedule

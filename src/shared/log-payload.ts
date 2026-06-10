@@ -104,7 +104,7 @@ function truncateText(text: string, maxBytes: number, headTail: boolean): string
 	return `${text.slice(0, headEnd)}…${text.slice(tailStart)}`;
 }
 
-export type PreparedLogPayload =
+type PreparedLogPayload =
 	| {
 			mode: "full";
 			byteLength: number;
@@ -123,7 +123,7 @@ export type PreparedLogPayload =
 			reason: "unserializable" | "empty";
 	  };
 
-export type PreparePayloadForLogOptions = {
+type PreparePayloadForLogOptions = {
 	maxFullBytes?: number;
 	maxPreviewBytes?: number;
 	maxStringChars?: number;

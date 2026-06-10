@@ -1,34 +1,13 @@
-import { GetParameterCommand, SSMClient } from "@aws-sdk/client-ssm";
 import type { Handler } from "aws-lambda";
 import { runScheduler } from "../../../src/scheduler.ts";
 import { createLogger, runWithRequestContext } from "../../../src/shared/logging.ts";
 
 const logger = createLogger({ job: "todoist-backlog-scheduler" });
-const ssm = new SSMClient({});
 
 export const handler: Handler<unknown, { statusCode: number; body: string }> = (_event, context) =>
 	runWithRequestContext(context.awsRequestId, async () => {
-		const parameterName = process.env.SSM_PARAMETER_NAME;
-		if (!parameterName) {
-			throw new Error("SSM_PARAMETER_NAME not configured");
-		}
-
-		try {
-			const response = await ssm.send(
-				new GetParameterCommand({ Name: parameterName, WithDecryption: true }),
-			);
-			const apiKey = response.Parameter?.Value;
-			if (!apiKey) {
-				throw new Error(`SSM parameter ${parameterName} returned no value`);
-			}
-			process.env.TODOIST_API_KEY = apiKey;
-		} catch (error) {
-			logger.error(
-				"todoist_backlog_sync_failed",
-				{ failurePhase: "ssm", ssmParameterName: parameterName },
-				error,
-			);
-			throw error;
+		if (!process.env.TODOIST_API_KEY) {
+			throw new Error("TODOIST_API_KEY not configured");
 		}
 
 		try {
@@ -40,15 +19,7 @@ export const handler: Handler<unknown, { statusCode: number; body: string }> = (
 				error instanceof Error && "taskCount" in error
 					? (error as Error & { taskCount?: number }).taskCount
 					: undefined;
-			logger.error(
-				"todoist_backlog_sync_failed",
-				{
-					taskCount,
-					failurePhase: "scheduler",
-					ssmParameterName: parameterName,
-				},
-				error,
-			);
+			logger.error("todoist_backlog_sync_failed", { taskCount, failurePhase: "scheduler" }, error);
 			throw error;
 		}
 	});

@@ -14,7 +14,7 @@ function lastWrite(spy: ReturnType<typeof captureStderr>): string {
 }
 
 describe("logging contract", () => {
-	it("emits level=error JSON that metric filters and alert-hub accept", () => {
+	it("emits level=error JSON that metric filters and shared-infra accept", () => {
 		vi.stubEnv("LOG_MASK_PII", "true");
 		const spy = captureStderr();
 
@@ -146,7 +146,7 @@ describe("logging contract", () => {
 		}
 	});
 
-	it("request_failed shape includes top-level error for alert-hub", () => {
+	it("request_failed shape includes top-level error for shared-infra", () => {
 		const spy = captureStderr();
 		try {
 			createLogger({ job: "memories" }).error(
@@ -162,7 +162,7 @@ describe("logging contract", () => {
 		}
 	});
 
-	it("ingestion_failed shape includes top-level error for alert-hub", () => {
+	it("ingestion_failed shape includes top-level error for shared-infra", () => {
 		const spy = captureStderr();
 		try {
 			createLogger({ job: "ingest" }).error(
@@ -178,7 +178,7 @@ describe("logging contract", () => {
 		}
 	});
 
-	it("migration_write_failed shape includes top-level error for alert-hub", () => {
+	it("migration_write_failed shape includes top-level error for shared-infra", () => {
 		const spy = captureStderr();
 		try {
 			createLogger({ job: "maintain" }).error(

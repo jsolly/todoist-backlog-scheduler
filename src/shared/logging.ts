@@ -1,5 +1,5 @@
 /**
- * Canonical Node Lambda structured logger for alert-hub-wired projects.
+ * Canonical Node Lambda structured logger for shared-infra-wired projects.
  * Distributed to consumer repos by ~/code/family-memory/scripts/sync-shared-logger.sh.
  * Behavior is pinned by tests/logging-contract.test.ts (also synced) and a per-repo
  * tests/logging-snapshot.test.ts that hashes this file against a managed constant.

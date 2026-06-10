@@ -58,7 +58,7 @@ sam deploy --parameter-overrides MaxTasksPerDay=5
 - TypeScript (Node 24, ES2024) on AWS Lambda (`arm64`)
 - AWS SAM for infrastructure (`aws/template.yaml`)
 - SSM Parameter Store for the Todoist API token
-- CloudWatch alarms wired to alert-hub for error notifications
+- CloudWatch alarms wired to shared-infra for error notifications
 - Vitest + Biome + native git hooks (`.git-hooks/`) for local quality gates
 
 ## Local development
@@ -96,4 +96,4 @@ TODOIST_API_KEY=... npm run scheduler
 
    First-time deploys: copy `samconfig.toml.example` → `samconfig.toml` (gitignored), or run `sam deploy --guided`. Set `AWS_PROFILE` locally for SSO.
 
-The Lambda runs every Sunday at 21:00 UTC. CloudWatch logs are retained for 30 days. Errors fan out to john@jsolly.com via the alert-hub project.
+The Lambda runs every Sunday at 21:00 UTC. CloudWatch logs are retained for 30 days. Errors fan out to john@jsolly.com via the shared-infra project.
