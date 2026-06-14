@@ -10,6 +10,7 @@
 	"scripts": {
 		"check:ts": "tsc --noEmit",
 		"check:biome": "biome check --write --no-errors-on-unmatched",
+		"check:md": "bash scripts/lint-md.sh",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"scheduler": "tsx --env-file-if-exists=.env src/cli.ts",
@@ -28,6 +29,7 @@
 		"@types/node": "^24.7.2",
 		"esbuild": "^0.25.10",
 		"lint-staged": "^16.4.0",
+		"markdownlint-cli2": "^0.22.1",
 		"tsx": "^4.20.6",
 		"typescript": "^5.9.3",
 		"vitest": "^4.1.5",

@@ -30,11 +30,11 @@ The distribution follows these rules:
 
 **Examples (week starts Monday, cap = 5, empty calendar):**
 
-| Undated tasks | Mon | Tue | Wed | Thu | Fri | Sat | Sun | Overflow |
-|---------------|-----|-----|-----|-----|-----|-----|-----|----------|
-| 5             | 1   | 1   | 1   | 1   | 1   | 0   | 0   | none     |
-| 10            | 2   | 2   | 2   | 1   | 1   | 1   | 1   | none     |
-| 35            | 5   | 5   | 5   | 5   | 5   | 5   | 5   | none     |
+| Undated tasks | Mon | Tue | Wed | Thu | Fri | Sat | Sun | Overflow          |
+|---------------|-----|-----|-----|-----|-----|-----|-----|-------------------|
+| 5             | 1   | 1   | 1   | 1   | 1   | 0   | 0   | none              |
+| 10            | 2   | 2   | 2   | 1   | 1   | 1   | 1   | none              |
+| 35            | 5   | 5   | 5   | 5   | 5   | 5   | 5   | none              |
 | 40            | 5   | 5   | 5   | 5   | 5   | 5   | 5   | 5 newest → week 2 |
 
 With existing tasks: if Monday already has 3 tasks and the cap is 5, Monday can absorb 2 more. The rest of the week absorbs the remainder, balanced as above.
@@ -96,4 +96,4 @@ TODOIST_API_KEY=... npm run scheduler
 
    First-time deploys: copy `samconfig.toml.example` → `samconfig.toml` (gitignored), or run `sam deploy --guided`. Set `AWS_PROFILE` locally for SSO.
 
-The Lambda runs every Sunday at 21:00 UTC. CloudWatch logs are retained for 30 days. Errors fan out to john@jsolly.com via the shared-infra project.
+The Lambda runs every Sunday at 21:00 UTC. CloudWatch logs are retained for 30 days. Errors fan out to <john@jsolly.com> via the shared-infra project.
