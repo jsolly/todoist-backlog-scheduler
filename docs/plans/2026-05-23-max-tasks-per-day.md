@@ -1,8 +1,8 @@
 # MAX_TASKS_PER_DAY Cap — Implementation Plan
 
-> **Retroactive plan.** The work was implemented before the `docs/superpowers/{specs,plans}/` convention was established for this repo. This file documents the decomposition after the fact so future changes have a structural reference, and so `/review-fix-push`'s `spec-compliance-reviewer` has something to check the diff against. Tasks are marked `[x]` because the implementation is already on disk (uncommitted on `main`); each task points to the actual file:line range that ended up implementing it.
+> **Retroactive plan.** The work was implemented before the `docs/{specs,plans}/` convention was established for this repo. This file documents the decomposition after the fact so future changes have a structural reference, and so `/review-fix-push`'s `spec-compliance-reviewer` has something to check the diff against. Tasks are marked `[x]` because the implementation is already on disk (uncommitted on `main`); each task points to the actual file:line range that ended up implementing it.
 
-**Spec:** `docs/superpowers/specs/2026-05-23-max-tasks-per-day-design.md`
+**Spec:** `docs/specs/2026-05-23-max-tasks-per-day-design.md`
 
 **Goal:** Add an optional `MAX_TASKS_PER_DAY` daily cap with multi-week overflow so the scheduler can drain backlogs progressively instead of dumping every undated task into one week.
 
@@ -93,7 +93,7 @@
 
 - Delete: `plans/migrate-to-typescript.md`
 
-- [x] **Step 1:** The Python → TypeScript migration is complete; the plan no longer reflects open work. Deleting from the deprecated top-level `plans/` location simultaneously aligns with the new `~/.agents/rules/specs-and-plans.md` convention (`docs/superpowers/plans/` is the new home).
+- [x] **Step 1:** The Python → TypeScript migration is complete; the plan no longer reflects open work. Deleting from the deprecated top-level `plans/` location simultaneously aligns with the new `~/.agents/rules/specs-and-plans.md` convention (`docs/plans/` is the new home).
 
 ---
 
