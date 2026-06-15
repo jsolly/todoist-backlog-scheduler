@@ -89,6 +89,8 @@ fi
 echo "▶ pre-push gate (todoist-backlog-scheduler) → $push_to_main"
 echo "• biome ci"
 npx biome ci . --error-on-warnings
+echo "• yaml lint"
+npm run check:yaml
 echo "• tsc --noEmit"
 npm run check:ts
 echo "• vitest"
