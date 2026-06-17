@@ -33,7 +33,6 @@
 		"markdownlint-cli2": "^0.22.1",
 		"tsx": "^4.20.6",
 		"typescript": "^5.9.3",
-		"vitest": "^4.1.5",
-		"wrangler": "^4.99.0"
+		"vitest": "^4.1.5"
 	}
 }
