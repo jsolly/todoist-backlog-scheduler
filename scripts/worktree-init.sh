@@ -27,6 +27,12 @@ while IFS= read -r line || [ -n "$line" ]; do
   line="${line#"${line%%[![:space:]]*}"}"             # trim leading whitespace
   line="${line%"${line##*[![:space:]]}"}"             # trim trailing whitespace
   [ -n "$line" ] || continue
+  # Reject absolute paths and `..` traversal (parity with the WorktreeCreate hook).
+  # .worktreeinclude is repo-controlled, but `../../.ssh/id_rsa` would read outside the
+  # primary AND, since the prefix-strip leaves `..` in $rel, write outside the worktree.
+  case "/$line/" in
+    //*|*/../*) echo "worktree-init: skipping unsafe .worktreeinclude entry '$line'" >&2; continue ;;
+  esac
   for src in "$primary"/$line; do                     # glob-expand against the primary
     [ -e "$src" ] || continue                         # tolerate zero matches
     rel="${src#"$primary"/}"
