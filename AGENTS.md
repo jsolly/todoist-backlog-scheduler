@@ -3,7 +3,7 @@
 - **First-time VM setup:** `bash scripts/cloud-agent-install.sh` (Node 24 via nvm, `npm ci`, AWS SAM CLI). Cursor’s `.cursor/environment.json` runs the same install hook on fresh VMs.
 - **PATH / Node:** Cloud VMs may expose a system Node 22 before nvm’s Node 24. If `node -v` is not 24.x, re-run `scripts/cloud-agent-install.sh` or open a new shell after install.
 - **No dev servers:** This repo has no web UI or long-running app. Verification is `npm test`, `npm run check:ts`, and `npx biome ci .` (see Commands below).
-- **Scheduler CLI:** `npm run scheduler` needs `TODOIST_API_KEY` in `.env` or the environment; it calls the live Todoist API. Tests stub `fetch` / fake clients — no Todoist token required for `npm test`.
+- **Scheduler CLI:** `npm run scheduler` needs `TODOIST_API_KEY` in `.env.local` or the environment; it calls the live Todoist API. Tests stub `fetch` / fake clients — no Todoist token required for `npm test`.
 - **SAM:** `sam validate --lint --template-file aws/template.yaml` from repo root. `sam build` / `npm run deploy` need repo-root `node_modules` (`npm ci` first). If `sam build` cannot find esbuild, ensure `node_modules/.bin` is on `PATH` (plain `npm run deploy` does this automatically).
 - **AWS deploy:** Optional for local dev; requires credentials/SSM and is not needed to run tests.
 
@@ -53,7 +53,7 @@ npm run deploy                    # sam build && sam deploy
 - **Layout:** Tests live under `tests/` named after the scenario family (e.g. `scheduler.test.ts`), not 1:1 per source file.
 - **External calls:** Stub `globalThis.fetch` for end-to-end paths that would otherwise hit Todoist. Pure logic (`distributeTasks`) takes a fake client object so the heap math is testable without any HTTP.
 - **Logger contract:** `tests/logging-contract.test.ts` + `tests/logging-snapshot.test.ts` pin the structured-logger shape; re-sync after edits to the canonical (see Key Constraints).
-- **Secrets:** `.env` for local runs, SSM for the deployed Lambda.
+- **Secrets:** `.env.local` for local runs, SSM for the deployed Lambda.
 
 ## Deploy model (agent-scoped)
 

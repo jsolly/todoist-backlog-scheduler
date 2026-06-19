@@ -65,7 +65,7 @@ sam deploy --parameter-overrides MaxTasksPerDay=5
 
 ```bash
 npm install
-echo 'TODOIST_API_KEY=...' > .env  # only needed if you want to run the CLI
+echo 'TODOIST_API_KEY=...' > .env.local  # only needed if you want to run the CLI
 npm test                            # vitest
 npm run check:ts                    # tsc --noEmit
 npx biome ci .                      # lint/format

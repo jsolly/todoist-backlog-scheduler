@@ -8,13 +8,14 @@
 		"node": ">=24"
 	},
 	"scripts": {
+		"worktree:init": "bash scripts/worktree-init.sh; npm_config_cache=\"${TMPDIR:-/tmp}/todoist-backlog-scheduler-npm-cache\" npm ci",
 		"check:ts": "tsc --noEmit",
 		"check:biome": "biome check --write --no-errors-on-unmatched",
 		"check:md": "bash scripts/lint-md.sh",
 		"check:yaml": "uvx yamllint@1.38.0 .",
 		"test": "vitest run",
 		"test:watch": "vitest",
-		"scheduler": "tsx --env-file-if-exists=.env src/cli.ts",
+		"scheduler": "tsx --env-file-if-exists=.env.local src/cli.ts",
 		"deploy": "sam build && sam deploy",
 		"prepare": "if [ -z \"$CI\" ] && git rev-parse --git-dir >/dev/null 2>&1; then git config core.hooksPath .git-hooks; fi",
 		"deploy:code": "bash aws/deploy-code.sh"

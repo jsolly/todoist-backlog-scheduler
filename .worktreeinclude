@@ -1,0 +1,13 @@
+# Gitignored files copied into a fresh worktree from the primary checkout.
+#
+# Consumed two ways, for parity:
+#   - `npm run worktree:init` (manual `git worktree add` path) — see scripts/worktree-init.sh
+#   - the dotagents WorktreeCreate hook (EnterWorktree / --worktree / subagent isolation)
+#
+# This is an ALLOWLIST, not a blanket copy: node_modules is intentionally absent
+# (worktree:init runs `npm ci` for a real install — never a symlink). The scheduler CLI
+# reads TODOIST_API_KEY from .env.local. Paths are globbed against the primary checkout;
+# zero matches are tolerated. Copied, never symlinked (a symlinked .env.local resolves
+# outside the worktree root).
+.env.local
+.env.*.local
