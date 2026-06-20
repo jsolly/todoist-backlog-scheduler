@@ -1,112 +1,28 @@
 #!/usr/bin/env bash
 # Pre-push gate for todoist-backlog-scheduler.
 #
-# This IS the committed pre-push hook (core.hooksPath=.git-hooks, wired by `npm run
-# prepare`); the gate logic lives here directly, not in a trampolined script. It
-# replaces the old .github/workflows/ci.yml. That workflow was CI-only (never
-# deployed), so this hook is gate-only: the SAM deploy stays a manual local step
-# (`npm run deploy`), unchanged.
-#
-# Only acts on a non-deleting push to main/master; feature-branch pushes stay
-# fast.
+# Thin shim over the shared fleet gate library (dotagents/gate/gate-lib.sh): the
+# ~100 lines of shared boilerplate — push-ref parsing, the gitleaks secrets scan,
+# markdown-lint-on-change, the doc-only fast path, and run_step (silent on green,
+# full output on red) — live in the lib. This file declares only the quality
+# steps. Gate-only: todoist's CI workflow never deployed; the SAM deploy stays a
+# manual local step (`npm run deploy`), so there is no working-tree guard here.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$ROOT"
-
-# pre-push stdin: <local ref> <local sha> <remote ref> <remote sha>
-ZERO="0000000000000000000000000000000000000000"
-push_to_main=""
-LOCAL_SHA="" REMOTE_SHA=""
-while read -r _local_ref local_sha remote_ref remote_sha; do
-  case "$remote_ref" in
-    refs/heads/main | refs/heads/master)
-      [ "$local_sha" = "$ZERO" ] && continue
-      push_to_main="$remote_ref"
-      LOCAL_SHA="$local_sha"
-      REMOTE_SHA="$remote_sha"
-      ;;
-  esac
-done
-[ -z "$push_to_main" ] && exit 0
-
-# --- Secrets scan ------------------------------------------------------------
-echo "• gitleaks"
-command -v gitleaks &>/dev/null || { echo "✗ gitleaks not installed  →  brew install gitleaks" >&2; exit 1; }
-if [ "$REMOTE_SHA" != "$ZERO" ] && git cat-file -e "$REMOTE_SHA" 2>/dev/null; then
-  gitleaks git --no-banner --log-opts="$REMOTE_SHA..$LOCAL_SHA"
-else
-  _base=$(git rev-parse --verify "refs/remotes/origin/main" 2>/dev/null \
-       || git rev-parse --verify "refs/remotes/origin/master" 2>/dev/null \
-       || echo "")
-  [ -n "$_base" ] && gitleaks git --no-banner --log-opts="$_base..$LOCAL_SHA" \
-                  || gitleaks git --no-banner --log-opts="$LOCAL_SHA"
-fi
-
-# --- Markdown lint -----------------------------------------------------------
-# Run whenever the pushed range touches markdown, BEFORE the docs-only fast path
-# below, so docs-only (and mixed) pushes always lint their markdown and then the
-# fast path still skips the expensive gate + deploy. Cheap. Fail-safe: lint when
-# the range cannot be computed.
-prepush_md_changed() { # <remote_sha> <local_sha>
-  local remote_sha="$1" local_sha="$2" f
-  [ -n "$remote_sha" ] && [ "$remote_sha" != "$ZERO" ] || return 0
-  git cat-file -e "$remote_sha" 2>/dev/null || return 0
-  git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null || return 0
-  while IFS= read -r f; do
-    case "$f" in *.md | *.mdx | *.markdown) return 0 ;; esac
-  done < <(git diff --name-only "$remote_sha" "$local_sha")
-  return 1
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"; cd "$ROOT"
+# shellcheck source=/dev/null
+source "${DOTAGENTS_GATE_LIB:-$HOME/code/dotagents/gate/gate-lib.sh}" || {
+  echo "✗ dotagents gate-lib not found (expected ~/code/dotagents/gate/gate-lib.sh) — re-run install-local-agent-runtime.sh." >&2
+  exit 1
 }
-if prepush_md_changed "$REMOTE_SHA" "$LOCAL_SHA"; then
-  echo "• markdown lint"
-  bash "$ROOT/scripts/lint-md.sh"
-fi
 
-# --- Doc-only fast path -------------------------------------------------------
-# Skip the full gate when the pushed range touches only documentation, so prose
-# edits don't pay for the lint/type/test battery. Conservative allow-list:
-# root-level *.md, the docs/ tree, .github/*.md, and LICENSE — markdown that is
-# site CONTENT (under src/, content/, …) still runs the full gate. Falls back to
-# the full gate whenever the range can't be computed (new branch, non-fast-
-# forward, missing remote sha), so it can only skip too little, never too much.
-# Force the full gate with:  FLEET_DOC_FAST=0 git push
-prepush_doc_only() { # <remote_sha> <local_sha>  → 0 when the fast path applies
-  local remote_sha="$1" local_sha="$2" files f
-  [ "${FLEET_DOC_FAST:-1}" = "1" ] || return 1
-  [ -n "$remote_sha" ] && [ "$remote_sha" != "$ZERO" ] || return 1
-  git cat-file -e "$remote_sha" 2>/dev/null || return 1
-  git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null || return 1
-  files="$(git diff --name-only "$remote_sha" "$local_sha")" || return 1
-  [ -n "$files" ] || return 1
-  while IFS= read -r f; do
-    case "$f" in
-      docs/*) ;;
-      .github/*.md) ;;
-      *.md | *.mdx | *.markdown) [ "${f%/*}" = "$f" ] || return 1 ;;
-      LICENSE | LICENSE.*) ;;
-      *) return 1 ;;
-    esac
-  done <<<"$files"
-  return 0
-}
-if prepush_doc_only "$REMOTE_SHA" "$LOCAL_SHA"; then
-  echo "▶ pre-push (todoist-backlog-scheduler) → $push_to_main: docs-only change — skipping the full gate."
-  exit 0
-fi
+gate_begin "todoist-backlog-scheduler"   # parse push; gitleaks; md-lint; doc-only fast path; banner; ERR trap
 
-echo "▶ pre-push gate (todoist-backlog-scheduler) → $push_to_main"
-echo "• biome ci"
-npx biome ci . --error-on-warnings
-echo "• yaml lint"
-npm run check:yaml
-echo "• tsc --noEmit"
-npm run check:ts
-echo "• vitest"
-npm test
-echo "• sam validate"
-sam validate --lint -t aws/template.yaml
+# --- Quality gate (run_step: silent on green, full output + abort on red) ---
+run_step "biome ci"  npx biome ci . --error-on-warnings
+run_step "yaml lint" npm run check:yaml
+run_step "tsc"       npm run check:ts
+run_step "vitest"    npm test
+run_step "sam validate" sam validate --lint -t aws/template.yaml
 
-# Deploy is NOT in this hook — todoist's CI workflow never deployed. Ship with
-# the manual local step: `npm run deploy` (sam build && sam deploy).
 echo "✓ pre-push gate complete  (deploy is manual: npm run deploy)"
