@@ -8,7 +8,7 @@
 		"node": ">=24"
 	},
 	"scripts": {
-		"worktree:init": "bash scripts/worktree-init.sh; npm_config_cache=\"${TMPDIR:-/tmp}/todoist-backlog-scheduler-npm-cache\" npm ci",
+		"worktree:init": "bash scripts/worktree-init.sh; npm ci",
 		"check:ts": "tsc --noEmit",
 		"check:biome": "biome check --write --no-errors-on-unmatched",
 		"check:md": "bash scripts/lint-md.sh",
