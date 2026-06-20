@@ -1,0 +1,6 @@
+# Repo-scoped pins for the system CLIs this repo's gate + deploy shell out to (not npm deps, not on
+# .nvmrc). The version-assert ceiling on the dependency-grounding presence floor — see
+# dotagents/rules/tool-versions.md. Bump with `mise use <tool>@<ver>`.
+[tools]
+aws-sam-cli = "1.162.1"   # aqua backend → official AWS SAM CLI release binary
+awscli      = "2.35.9"    # aqua backend → official AWS CLI v2 release binary

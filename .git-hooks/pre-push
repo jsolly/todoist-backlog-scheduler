@@ -19,6 +19,9 @@ source "${DOTAGENTS_GATE_LIB:-$HOME/code/dotagents/gate/gate-lib.sh}" || {
 gate_begin "todoist-backlog-scheduler"   # parse push; gitleaks; md-lint; doc-only fast path; banner; ERR trap
 
 gate_require_node                         # enforce the pinned Node (.nvmrc), not whatever's on PATH
+# Resolve sam to the repo-pinned version (.mise.toml) — non-interactive hook, so the shell profile's
+# mise activation isn't loaded. Guarded; degrades to global sam without mise (rules/tool-versions.md).
+command -v mise >/dev/null 2>&1 && eval "$(mise activate bash --shims)"
 gate_require_cli sam                       # the sam validate step needs the SAM CLI (system tool, not an npm dep)
 
 # --- Quality gate (run_step: silent on green, full output + abort on red) ---

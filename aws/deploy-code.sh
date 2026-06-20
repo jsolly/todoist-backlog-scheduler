@@ -8,6 +8,9 @@ cd "$(dirname "$0")/.."
 STACK=todoist-backlog-scheduler
 FUNCTIONS=(SchedulerFunction)
 export PATH="$PWD/node_modules/.bin:$PATH"
+# Resolve aws/sam to the repo-pinned versions (.mise.toml) — guarded; degrades to global without mise
+# (rules/tool-versions.md). The node_modules/.bin prepend above is independent (grounds esbuild).
+command -v mise >/dev/null 2>&1 && eval "$(mise activate bash --shims)"
 # Ground the system CLIs this deploy shells out to: aws/sam are NOT npm deps (the PATH prepend above
 # only grounds the local esbuild that `sam build` calls), so fail loud if absent — never a hard-coded
 # path, since Homebrew differs by arch (rules/dependency-grounding.md).
