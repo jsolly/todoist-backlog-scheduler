@@ -8,6 +8,11 @@ cd "$(dirname "$0")/.."
 STACK=todoist-backlog-scheduler
 FUNCTIONS=(SchedulerFunction)
 export PATH="$PWD/node_modules/.bin:$PATH"
+# Ground the system CLIs this deploy shells out to: aws/sam are NOT npm deps (the PATH prepend above
+# only grounds the local esbuild that `sam build` calls), so fail loud if absent — never a hard-coded
+# path, since Homebrew differs by arch (rules/dependency-grounding.md).
+command -v sam >/dev/null 2>&1 || { echo "✗ sam CLI not found — brew install aws-sam-cli" >&2; exit 1; }
+command -v aws >/dev/null 2>&1 || { echo "✗ aws CLI not found — brew install awscli" >&2; exit 1; }
 # Plain `sam build` — each repo's samconfig.toml carries template/base_dir settings.
 sam build
 for logical in "${FUNCTIONS[@]}"; do

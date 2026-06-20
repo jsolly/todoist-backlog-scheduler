@@ -18,8 +18,12 @@ source "${DOTAGENTS_GATE_LIB:-$HOME/code/dotagents/gate/gate-lib.sh}" || {
 
 gate_begin "todoist-backlog-scheduler"   # parse push; gitleaks; md-lint; doc-only fast path; banner; ERR trap
 
+gate_require_node                         # enforce the pinned Node (.nvmrc), not whatever's on PATH
+gate_require_cli sam                       # the sam validate step needs the SAM CLI (system tool, not an npm dep)
+
 # --- Quality gate (run_step: silent on green, full output + abort on red) ---
-run_step "biome ci"  npx biome ci . --error-on-warnings
+run_step "dep grounding" gate_check_dep_grounding .git-hooks/pre-push scripts/*.sh aws/*.sh
+run_step "biome ci"  npx --no-install biome ci . --error-on-warnings
 run_step "yaml lint" npm run check:yaml
 run_step "tsc"       npm run check:ts
 run_step "vitest"    npm test
