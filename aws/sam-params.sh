@@ -19,6 +19,13 @@ fi
 # shellcheck disable=SC2163
 while IFS='=' read -r _key _value; do
   [[ -z "$_key" || "$_key" == \#* ]] && continue
+  # Skip AWS_* credential/region selectors. This full infra deploy must run under the operator's
+  # admin session; if .env.local ever sets AWS_PROFILE (e.g. fleet-deploy for the code-only path,
+  # like the sibling repos), importing it here would clobber that session and the deploy would fail
+  # closed on cloudformation:UpdateStack. An exported env AWS_PROFILE wins over samconfig's profile=,
+  # so this guard — not the samconfig profile — is what keeps the deploy on the admin creds. SAM
+  # still reads creds from the operator's environment/SSO. (Matches family-memory's sam-params.sh.)
+  [[ "$_key" == AWS_* ]] && continue
   export "$_key=$_value"
 done < "$_ENV_FILE"
 
