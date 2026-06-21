@@ -1,4 +1,0 @@
-{
-  "install": "bash .dotagents/bootstrap.sh && bash scripts/cloud-agent-install.sh",
-  "start": "echo 'Cloud agent env ready'"
-}

@@ -18,4 +18,3 @@ confirm_changeset = true
 parameter_overrides = "MaxTasksPerDay=5 AlertTopicArn=/shared-infra/alert-topic-arn TodoistApiKey=your-todoist-api-key"
 
 # Copy to samconfig.toml (gitignored). Local credentials: export AWS_PROFILE in shell or .env.local.
-# Cursor cloud: CURSOR_AWS_ASSUME_IAM_ROLE_ARN + SAMCONFIG_TOML secret (no profile=). See docs/cloud-agents.md.
