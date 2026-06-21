@@ -9,6 +9,12 @@ Globals:
       - arm64
     Timeout: 60
     MemorySize: 256
+    Environment:
+      Variables:
+        # The esbuild build emits Sourcemap:true; this makes the Node runtime
+        # actually consume it, so CloudWatch stack traces map to .ts source
+        # (the sourcesContent travels in the bundle). Cheap for a weekly cron.
+        NODE_OPTIONS: --enable-source-maps
 
 Parameters:
   TodoistApiKey:
