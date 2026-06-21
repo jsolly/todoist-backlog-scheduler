@@ -11,3 +11,11 @@
 # outside the worktree root).
 .env.local
 .env.*.local
+# SAM deploy config (gitignored, copied from samconfig.toml.example at repo root,
+# then filled in with the prod profile + TodoistApiKey override). Without it,
+# `npm run deploy:code` / the bare `sam build` in aws/deploy-code.sh fails from a
+# fresh worktree with "Template file not found" because samconfig.toml is what
+# carries template_file = "aws/template.yaml" and base_dir = ".". Holds a deploy
+# secret in parameter_overrides, so it's carried like .env.local — never committed.
+# (The pre-push GATE's sam build is unaffected: it passes -t/--base-dir explicitly.)
+samconfig.toml
