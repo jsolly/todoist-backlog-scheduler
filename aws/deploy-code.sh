@@ -16,6 +16,11 @@ command -v mise >/dev/null 2>&1 && eval "$(mise activate bash --shims)"
 # path, since Homebrew differs by arch (rules/dependency-grounding.md).
 command -v sam >/dev/null 2>&1 || { echo "✗ sam CLI not found — brew install aws-sam-cli" >&2; exit 1; }
 command -v aws >/dev/null 2>&1 || { echo "✗ aws CLI not found — brew install awscli" >&2; exit 1; }
+# Reproducible bundle: reinstall exactly the committed lockfile before `sam build` bundles the
+# Lambda from gitignored node_modules. This MANUAL code-only path can run from a stale checkout —
+# the read-only `main` mirror is never `npm ci`'d in the worktree-first flow — so always reinstall
+# (the 2026-06-21 incident was a week-stale node_modules missing a newly-added dep). cwd is repo root.
+npm ci
 # Plain `sam build` — each repo's samconfig.toml carries template/base_dir settings.
 sam build
 for logical in "${FUNCTIONS[@]}"; do
