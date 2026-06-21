@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Code-only Lambda deploy under the scoped agent-deploy role.
-# Locally: export AWS_PROFILE=fleet-deploy (see AGENTS.md). Cloud agents get
-# credentials injected. Infra/template changes are NOT applied here — they
-# require a full `sam deploy` with admin creds on the laptop.
+# Locally: export AWS_PROFILE=fleet-deploy (see AGENTS.md). Infra/template
+# changes are NOT applied here — they require a full `sam deploy` with admin
+# creds on the laptop.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 STACK=todoist-backlog-scheduler
