@@ -15,7 +15,7 @@ TODOIST_API_KEY=... npm run scheduler   # Run the CLI locally against your real 
 npm test                          # vitest
 npm run check:ts                  # tsc --noEmit
 npx biome ci .                    # lint + format check
-npm run deploy                    # sam build && sam deploy
+npm run deploy                    # full deploy via aws/deploy.sh: npm ci + sam build + sam deploy (sets GitSha; admin creds)
 ```
 
 ## Architecture

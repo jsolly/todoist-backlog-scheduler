@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const LOGGER_HASH = "1887ee5ffe36b0b9f168c6e8a7c27aa8b2c471f35dd62ed0bd9a32730d8e2882";
+const LOGGER_HASH = "28a131120ebb6b3d90babb905390747aa162e2f001fe09bee2c6d830fab13f75";
 // LOGGER_HASH is rewritten by ~/code/family-memory/scripts/sync-shared-logger.sh on sync.
 // Matches sync-shared-logger.sh's `combined_hash`: strip BOM, CRLF -> LF,
 // trim trailing newlines, append exactly one, then SHA-256(logger || test).

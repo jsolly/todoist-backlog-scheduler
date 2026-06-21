@@ -26,6 +26,7 @@ type LogEntry = {
 	message: string;
 	context?: Record<string, unknown>;
 	requestId?: string;
+	gitSha?: string;
 	error?: {
 		name?: string;
 		message: string;
@@ -217,6 +218,12 @@ function buildEntry(
 	}
 	if (error !== undefined) {
 		entry.error = serializeError(error);
+	}
+	// Deployed commit, set as the GIT_SHA Lambda env var by the deploy (GitSha param).
+	// Stamps every log line so an agent debugging from CloudWatch can `git show <sha>:file`
+	// the exact source that ran. Unset locally and in tests, so the field is omitted there.
+	if (process.env.GIT_SHA) {
+		entry.gitSha = process.env.GIT_SHA;
 	}
 
 	return entry;
