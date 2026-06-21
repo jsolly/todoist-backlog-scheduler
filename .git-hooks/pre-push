@@ -31,5 +31,13 @@ run_step "yaml lint" npm run check:yaml
 run_step "tsc"       npm run check:ts
 run_step "vitest"    npm test
 run_step "sam validate" sam validate --lint -t aws/template.yaml
+# Build the Lambda bundle too — `sam validate` checks template syntax only, never that the
+# handler code esbuild-bundles, so a bundling regression would otherwise first surface at
+# `npm run deploy`. Pass -t/--base-dir EXPLICITLY (not a bare `sam build`): samconfig.toml is
+# gitignored and deliberately NOT carried into worktrees (it holds a deploy secret in
+# parameter_overrides), and this gate runs in a worktree — so the build must be self-contained
+# from tracked files. `-t aws/template.yaml --base-dir .` mirrors samconfig's [build.parameters]
+# (CodeUri is repo-root-relative). esbuild BuildMethod → no Docker; gate_require_cli sam is the precond.
+run_step "sam build" gate_sam_build -t aws/template.yaml --base-dir .
 
 echo "✓ pre-push gate complete  (deploy is manual: npm run deploy)"
