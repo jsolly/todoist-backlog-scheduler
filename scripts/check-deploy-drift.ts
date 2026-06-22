@@ -31,7 +31,10 @@
  */
 import { execFileSync } from "node:child_process";
 
-const FUNCTION_PREFIX = "todoist-backlog-scheduler-";
+// The function carries an explicit template FunctionName of exactly "todoist-backlog-scheduler"
+// (no CFN-generated suffix), so the discovery prefix has NO trailing hyphen — it must still
+// match that bare name (and any future todoist-backlog-scheduler-* siblings).
+const FUNCTION_PREFIX = "todoist-backlog-scheduler";
 // Runtime code spans the shared logger (src/) AND the handler (aws/src/), so behind-detection must
 // consider BOTH — a stale scheduler under aws/src/ is real drift, not "docs only".
 const RUNTIME_PATHS = ["src/", "aws/src/"];

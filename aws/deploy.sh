@@ -47,10 +47,12 @@ source "${DOTAGENTS_GATE_LIB:-$HOME/code/dotagents/gate/gate-lib.sh}" || {
   exit 1
 }
 _commit="$(git rev-parse HEAD)"
+# No trailing hyphen: the function's explicit template FunctionName is exactly
+# "todoist-backlog-scheduler" (no CFN suffix), so the prefix must match that bare name.
 _fns="$(aws lambda list-functions \
-  --query "Functions[?starts_with(FunctionName, 'todoist-backlog-scheduler-')].[FunctionName, CodeSha256, FunctionArn]" \
+  --query "Functions[?starts_with(FunctionName, 'todoist-backlog-scheduler')].[FunctionName, CodeSha256, FunctionArn]" \
   --output text)"
-[ -n "$_fns" ] || { echo "✗ no todoist-backlog-scheduler-* functions found to tag after deploy" >&2; exit 1; }
+[ -n "$_fns" ] || { echo "✗ no todoist-backlog-scheduler* functions found to tag after deploy" >&2; exit 1; }
 echo "• stamp deploy provenance tags (Deploy-Sha256 / Deploy-Commit)"
 while read -r _name _sha _arn; do
   [ -n "$_name" ] || continue
