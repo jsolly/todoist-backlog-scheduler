@@ -24,9 +24,6 @@ Parameters:
     Type: Number
     Default: 0
     Description: Max tasks per day (0 = no limit, distributes evenly with no cap)
-  GitSha:
-    Type: String
-    Default: unknown
   TodoistApiKeySsmParam:
     Type: String
     Default: /todoist-backlog-scheduler/api-key
@@ -67,7 +64,6 @@ Resources:
           # docs/specs/2026-06-22-secret-runtime-fetch-design.md.
           TODOIST_API_KEY_SSM_PARAM: !Ref TodoistApiKeySsmParam
           MAX_TASKS_PER_DAY: !Ref MaxTasksPerDay
-          GIT_SHA: !Ref GitSha
       # Least-privilege: read ONLY the one SecureString this function needs (same
       # !Ref as the env var above, so the grant can't drift from what's fetched).
       # No kms:Decrypt needed — the param uses the AWS-managed alias/aws/ssm key,

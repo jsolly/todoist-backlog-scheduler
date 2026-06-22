@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Full production deploy: builds the Lambda bundle and runs the SAM deploy with admin
-# SSO creds. This is the ONLY path that sets GitSha (and thus the GIT_SHA runtime env);
-# the routine code-only path (aws/deploy-code.sh) leaves it untouched. Infra/template
-# changes require this full deploy. The deploy secret + dynamic GitSha come from
-# .env.local via sam-params.sh.
+# SSO creds. Infra/template changes require this full deploy; the routine code-only path
+# is aws/deploy-code.sh. The deploy secret comes from .env.local via sam-params.sh, and
+# deploy provenance is stamped as Deploy-Sha256/Deploy-Commit function tags afterward
+# (the re-tag step below; both deploy paths share gate_lambda_tag_provenance).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -27,9 +27,33 @@ npm ci
 # use the pinned version, not whatever's global.
 export PATH="$REPO_ROOT/node_modules/.bin:$PATH"
 sam build
-# Assemble SAM_PARAMS (incl. the dynamic GitSha) from .env.local. `--parameter-overrides`
-# REPLACES samconfig's parameter_overrides wholesale, so sam-params.sh re-lists every param
-# samconfig supplied — see its comment. This is the only path that sets GIT_SHA.
+# Assemble SAM_PARAMS from .env.local. `--parameter-overrides` REPLACES samconfig's
+# parameter_overrides wholesale, so sam-params.sh re-lists every param samconfig
+# supplied — see its comment.
 # shellcheck source=./sam-params.sh
 source "$SCRIPT_DIR/sam-params.sh"
 sam deploy --parameter-overrides "${SAM_PARAMS[@]}"
+
+# Re-stamp Deploy-Sha256/Deploy-Commit on every function. A full SAM deploy rebuilds the bundle
+# (→ a new CodeSha256) through CloudFormation but does NOT run aws/deploy-code.sh's per-function tag
+# step, so without this the provenance tags desync from live code and scripts/check-deploy-drift.ts
+# false-fires its INTEGRITY check on this legitimate, on-pipeline deploy. Same two tags the code-only
+# deploy writes; reads each function's post-deploy CodeSha256 from list-functions (no hardcoded
+# function list to drift from the template). Fail-closed: set -e + gate_lambda_tag_provenance abort
+# if tagging can't complete (a stale tag would make the audit lie).
+# shellcheck source=/dev/null
+source "${DOTAGENTS_GATE_LIB:-$HOME/code/dotagents/gate/gate-lib.sh}" || {
+  echo "✗ dotagents gate-lib not found (expected ~/code/dotagents/gate/gate-lib.sh) — re-run install-local-agent-runtime.sh." >&2
+  exit 1
+}
+_commit="$(git rev-parse HEAD)"
+_fns="$(aws lambda list-functions \
+  --query "Functions[?starts_with(FunctionName, 'todoist-backlog-scheduler-')].[FunctionName, CodeSha256, FunctionArn]" \
+  --output text)"
+[ -n "$_fns" ] || { echo "✗ no todoist-backlog-scheduler-* functions found to tag after deploy" >&2; exit 1; }
+echo "• stamp deploy provenance tags (Deploy-Sha256 / Deploy-Commit)"
+while read -r _name _sha _arn; do
+  [ -n "$_name" ] || continue
+  gate_lambda_tag_provenance "$_arn" "$_sha" "$_commit"
+  echo "  ✓ $_name ($_sha)"
+done <<<"$_fns"

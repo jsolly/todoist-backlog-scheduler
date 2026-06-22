@@ -3,9 +3,9 @@
 # .env.local -> SAM parameter translation for the full production deploy (aws/deploy.sh).
 #
 # Mirrors family-memory/aws/sam-params.sh: every value comes from the gitignored
-# .env.local (never committed), so the dynamic GitSha can ride alongside the secret.
-# GitSha stamps every structured log line (src/shared/logging.ts) so a prod error is
-# traceable to the exact source via `git show <sha>:<file>`.
+# .env.local (never committed). Deploy provenance is no longer a SAM parameter — it
+# rides as the Deploy-Sha256/Deploy-Commit function tags stamped after each deploy
+# (aws/deploy.sh re-tag step; scripts/check-deploy-drift.ts audits them).
 set -euo pipefail
 
 _PARAMS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -36,15 +36,12 @@ done < "$_ENV_FILE"
 #     --type SecureString --value <key> --overwrite --region us-east-1
 # (.env.local's TODOIST_API_KEY is still used for the local `npm run scheduler` CLI.)
 
-_GIT_SHA="$(git -C "$_PARAMS_DIR/.." rev-parse --short HEAD 2>/dev/null || echo unknown)"
-
 # These mirror samconfig.toml's [default.deploy.parameters] parameter_overrides
-# (MaxTasksPerDay + AlertTopicArn) plus the dynamic GitSha. Passing
-# `--parameter-overrides` REPLACES samconfig's set wholesale (it does not merge), so
-# EVERY param samconfig supplied must be listed here or the deploy drops it.
+# (MaxTasksPerDay + AlertTopicArn). Passing `--parameter-overrides` REPLACES
+# samconfig's set wholesale (it does not merge), so EVERY param samconfig supplied
+# must be listed here or the deploy drops it.
 SAM_PARAMS=(
   "AlertTopicArn=/shared-infra/alert-topic-arn"
   "MaxTasksPerDay=${MAX_TASKS_PER_DAY:-5}"
-  "GitSha=$_GIT_SHA"
 )
 export SAM_PARAMS
