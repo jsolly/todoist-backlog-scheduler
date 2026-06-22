@@ -16,7 +16,7 @@
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"scheduler": "tsx --env-file-if-exists=.env.local src/cli.ts",
-		"deploy": "bash aws/deploy.sh",
+		"deploy:infra": "bash aws/deploy.sh",
 		"prepare": "if [ -z \"$CI\" ] && git rev-parse --git-dir >/dev/null 2>&1; then git config core.hooksPath .git-hooks; fi",
 		"deploy:code": "bash aws/deploy-code.sh"
 	},

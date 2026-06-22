@@ -2,7 +2,7 @@
 
 - **No dev servers:** This repo has no web UI or long-running app. Verification is `npm test`, `npm run check:ts`, and `npx biome ci .` (see Commands below).
 - **Scheduler CLI:** `npm run scheduler` needs `TODOIST_API_KEY` in `.env.local` or the environment; it calls the live Todoist API. Tests stub `fetch` / fake clients — no Todoist token required for `npm test`.
-- **SAM:** `sam validate --lint --template-file aws/template.yaml` from repo root. `sam build` / `npm run deploy` need repo-root `node_modules` (`npm ci` first). If `sam build` cannot find esbuild, ensure `node_modules/.bin` is on `PATH` (plain `npm run deploy` does this automatically).
+- **SAM:** `sam validate --lint --template-file aws/template.yaml` from repo root. `sam build` / `npm run deploy:infra` need repo-root `node_modules` (`npm ci` first). If `sam build` cannot find esbuild, ensure `node_modules/.bin` is on `PATH` (plain `npm run deploy:infra` does this automatically).
 - **AWS deploy:** Optional for local dev; requires credentials/SSM and is not needed to run tests.
 
 ## Commands
@@ -13,7 +13,7 @@ TODOIST_API_KEY=... npm run scheduler   # Run the CLI locally against your real 
 npm test                          # vitest
 npm run check:ts                  # tsc --noEmit
 npx biome ci .                    # lint + format check
-npm run deploy                    # full deploy via aws/deploy.sh: npm ci + sam build + sam deploy (sets GitSha; admin creds)
+npm run deploy:infra              # full deploy via aws/deploy.sh: npm ci + sam build + sam deploy (sets GitSha; admin creds)
 ```
 
 ## Architecture

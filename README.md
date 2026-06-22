@@ -91,7 +91,7 @@ TODOIST_API_KEY=... npm run scheduler
 2. Build and deploy:
 
    ```bash
-   npm run deploy   # sam build && sam deploy
+   npm run deploy:infra   # sam build && sam deploy
    ```
 
    First-time deploys: copy `samconfig.toml.example` → `samconfig.toml` (gitignored), or run `sam deploy --guided`. Set `AWS_PROFILE` locally for SSO.
