@@ -113,7 +113,8 @@ These are the infra-mutation + secret-write actions the agent must not run
 2. **Full deploy** (applies template + IAM + code):
 
    ```bash
-   npm run deploy        # aws/deploy.sh — sam build + sam deploy, admin SSO creds
+   npm run deploy:infra  # aws/deploy.sh — full sam build + sam deploy, admin SSO creds
+                         # (NOT deploy:code — that's code-only and skips the IAM/template change)
    ```
 
 ## Verification
