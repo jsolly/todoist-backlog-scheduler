@@ -29,18 +29,22 @@ while IFS='=' read -r _key _value; do
   export "$_key=$_value"
 done < "$_ENV_FILE"
 
-: "${TODOIST_API_KEY:?TODOIST_API_KEY not set in .env.local}"
+# The Todoist API key is NO LONGER a deploy parameter — the function fetches it at
+# runtime from the SSM SecureString /todoist-backlog-scheduler/api-key (see
+# aws/template.yaml + src/shared/secrets.ts). Provision/rotate it out of band:
+#   aws ssm put-parameter --name /todoist-backlog-scheduler/api-key \
+#     --type SecureString --value <key> --overwrite --region us-east-1
+# (.env.local's TODOIST_API_KEY is still used for the local `npm run scheduler` CLI.)
 
 _GIT_SHA="$(git -C "$_PARAMS_DIR/.." rev-parse --short HEAD 2>/dev/null || echo unknown)"
 
 # These mirror samconfig.toml's [default.deploy.parameters] parameter_overrides
-# (MaxTasksPerDay + AlertTopicArn + TodoistApiKey) plus the dynamic GitSha. Passing
+# (MaxTasksPerDay + AlertTopicArn) plus the dynamic GitSha. Passing
 # `--parameter-overrides` REPLACES samconfig's set wholesale (it does not merge), so
 # EVERY param samconfig supplied must be listed here or the deploy drops it.
 SAM_PARAMS=(
   "AlertTopicArn=/shared-infra/alert-topic-arn"
   "MaxTasksPerDay=${MAX_TASKS_PER_DAY:-5}"
-  "TodoistApiKey=$TODOIST_API_KEY"
   "GitSha=$_GIT_SHA"
 )
 export SAM_PARAMS

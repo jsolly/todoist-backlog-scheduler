@@ -1,4 +1,5 @@
 import { createLogger } from "./shared/logging.ts";
+import { getTodoistApiKey } from "./shared/secrets.ts";
 import { TodoistClient, type TodoistTask } from "./todoist.ts";
 
 const logger = createLogger({ job: "todoist-backlog-scheduler" });
@@ -152,10 +153,7 @@ export async function distributeTasks(
 }
 
 export async function runScheduler(now: Date = new Date()): Promise<SchedulerResult> {
-	const apiKey = process.env.TODOIST_API_KEY;
-	if (!apiKey) {
-		throw new Error("TODOIST_API_KEY not configured");
-	}
+	const apiKey = await getTodoistApiKey();
 	const client = new TodoistClient(apiKey);
 	const tasks = await client.filterTasks("no date");
 

@@ -370,12 +370,19 @@ describe("Todoist backlog scheduler", () => {
 
 	it("scheduler aborts immediately when the API key is missing", async () => {
 		const previous = process.env.TODOIST_API_KEY;
+		const previousSsmParam = process.env.TODOIST_API_KEY_SSM_PARAM;
 		delete process.env.TODOIST_API_KEY;
+		// Also clear the SSM param name so getTodoistApiKey throws locally instead
+		// of attempting a real SSM fetch if some env/CI has it set.
+		delete process.env.TODOIST_API_KEY_SSM_PARAM;
 		try {
 			await expect(runScheduler()).rejects.toThrow(/TODOIST_API_KEY/);
 		} finally {
 			if (previous !== undefined) {
 				process.env.TODOIST_API_KEY = previous;
+			}
+			if (previousSsmParam !== undefined) {
+				process.env.TODOIST_API_KEY_SSM_PARAM = previousSsmParam;
 			}
 		}
 	});

@@ -6,10 +6,7 @@ const logger = createLogger({ job: "todoist-backlog-scheduler" });
 
 export const handler: Handler<unknown, { statusCode: number; body: string }> = (_event, context) =>
 	runWithRequestContext(context.awsRequestId, async () => {
-		if (!process.env.TODOIST_API_KEY) {
-			throw new Error("TODOIST_API_KEY not configured");
-		}
-
+		// Key resolution + validation happen in runScheduler via getTodoistApiKey.
 		try {
 			const result = await runScheduler();
 			logger.info("handler complete", { tasksDistributed: result.tasksDistributed });

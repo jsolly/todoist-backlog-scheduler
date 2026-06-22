@@ -17,10 +17,6 @@ Globals:
         NODE_OPTIONS: --enable-source-maps
 
 Parameters:
-  TodoistApiKey:
-    Type: String
-    NoEcho: true
-    Description: Todoist API key (set via parameter_overrides in gitignored samconfig.toml)
   AlertTopicArn:
     Type: AWS::SSM::Parameter::Value<String>
     Default: /shared-infra/alert-topic-arn
@@ -31,6 +27,12 @@ Parameters:
   GitSha:
     Type: String
     Default: unknown
+  TodoistApiKeySsmParam:
+    Type: String
+    Default: /todoist-backlog-scheduler/api-key
+    Description: >-
+      SSM SecureString param NAME (not the value) holding the Todoist API key.
+      Single source for the env var + IAM ARN below so they can't drift.
 
 Resources:
   SchedulerLogGroup:
@@ -58,9 +60,26 @@ Resources:
       Handler: scheduler.handler
       Environment:
         Variables:
-          TODOIST_API_KEY: !Ref TodoistApiKey
+          # The param NAME only — not the secret value. The function fetches the
+          # SecureString at runtime (src/shared/secrets.ts) so the key never sits
+          # in a plaintext env var (readable via lambda:GetFunctionConfiguration
+          # regardless of NoEcho). Design: shared-infra
+          # docs/specs/2026-06-22-secret-runtime-fetch-design.md.
+          TODOIST_API_KEY_SSM_PARAM: !Ref TodoistApiKeySsmParam
           MAX_TASKS_PER_DAY: !Ref MaxTasksPerDay
           GIT_SHA: !Ref GitSha
+      # Least-privilege: read ONLY the one SecureString this function needs (same
+      # !Ref as the env var above, so the grant can't drift from what's fetched).
+      # No kms:Decrypt needed — the param uses the AWS-managed alias/aws/ssm key,
+      # whose key policy already delegates decryption to account IAM via
+      # kms:ViaService (add an explicit kms:Decrypt only for a customer CMK). Keep
+      # the action singular (ssm:GetParameter); the function never lists/batches.
+      Policies:
+        - Statement:
+            - Sid: ReadTodoistApiKey
+              Effect: Allow
+              Action: ssm:GetParameter
+              Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${TodoistApiKeySsmParam}"
       LoggingConfig:
         LogGroup: !Ref SchedulerLogGroup
       Events:
