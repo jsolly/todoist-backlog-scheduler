@@ -29,6 +29,12 @@ source "${DOTAGENTS_GATE_LIB:-$HOME/code/dotagents/gate/gate-lib.sh}" || {
 npm ci
 # Plain `sam build` — each repo's samconfig.toml carries template/base_dir settings.
 sam build
+
+# Fail closed: deploy ONLY what has landed on origin/main (gate-lib) — never the local tree before the
+# ref lands (the deploy is a post-push step). Runs after the reversible npm ci + sam build, before the
+# irreversible aws lambda update-function-code loop below.
+gate_require_landed main
+
 # The git commit this deploy built from — stamped as the Deploy-Commit tag (with AWS's CodeSha256 as
 # Deploy-Sha256) for CodeSha256-based drift detection (scripts/check-deploy-drift.ts). Full SHA.
 COMMIT="$(git rev-parse HEAD)"
