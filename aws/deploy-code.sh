@@ -22,6 +22,11 @@ source "${DOTAGENTS_GATE_LIB:-$HOME/code/dotagents/gate/gate-lib.sh}" || {
   echo "✗ dotagents gate-lib not found — re-run install-local-agent-runtime.sh." >&2
   exit 1
 }
+# Fail loud if this worktree wasn't provisioned: samconfig.toml (carried via .worktreeinclude) is what the
+# bare `sam build` below reads for template_file/base_dir — without it SAM dies "Template file not found".
+# gate_require_provisioned needs $ROOT; cwd is the repo root here (cd above), so set it.
+ROOT="$(pwd)"
+gate_require_provisioned
 # Reproducible bundle: reinstall exactly the committed lockfile before `sam build` bundles the
 # Lambda from gitignored node_modules. This MANUAL code-only path can run from a stale checkout —
 # the read-only `main` mirror is never `npm ci`'d in the worktree-first flow — so always reinstall
