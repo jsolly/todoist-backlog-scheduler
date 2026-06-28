@@ -1,4 +1,5 @@
 {
+  "extends": "../dotagents/tsconfig/strict-tsc.json",
   "compilerOptions": {
     "target": "ES2024",
     "lib": ["ES2024", "DOM"],
@@ -8,17 +9,10 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,
-
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-    "noFallthroughCasesInSwitch": true,
     "exactOptionalPropertyTypes": true,
-
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
-
     "types": ["node", "vitest/globals"]
   },
   "include": [
