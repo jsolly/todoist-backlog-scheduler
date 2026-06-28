@@ -1,3 +1,11 @@
+## Ship
+
+Ship profile: `aws-sam`
+
+**Post-push (step 12):** Run `npm run deploy:code` after push when handler code changed. Run `npm run deploy:infra` manually (human MFA) when `aws/template.yaml` changes — never auto-run from `/ship`.
+
+Local gate before push: `npm test && npm run check:ts && npx biome ci .`.
+
 ## Local development
 
 - **No dev servers:** This repo has no web UI or long-running app. Verification is `npm test`, `npm run check:ts`, and `npx biome ci .` (see Commands below).
