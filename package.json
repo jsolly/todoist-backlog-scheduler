@@ -5,7 +5,7 @@
 	"type": "module",
 	"description": "Distribute undated Todoist tasks evenly across the upcoming week",
 	"engines": {
-		"node": ">=24"
+		"node": "24.x"
 	},
 	"scripts": {
 		"worktree:init": "bash scripts/worktree-init.sh; npm ci && (command -v mise >/dev/null 2>&1 && mise install || true)",
