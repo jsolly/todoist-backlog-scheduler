@@ -1,5 +1,5 @@
 {
-  "extends": "../dotagents/tsconfig/strict-tsc.json",
+  "extends": "./tsconfig/fleet/strict-tsc.json",
   "compilerOptions": {
     "target": "ES2024",
     "lib": ["ES2024", "DOM"],

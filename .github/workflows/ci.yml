@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+# Least-privilege: CI executes PR-supplied code (dependency install scripts, the test
+# suite) and needs only to read the checkout — no writes, no id-token/OIDC.
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: astral-sh/setup-uv@v5
+      - uses: jdx/mise-action@v2 # installs the pinned aws/sam from .mise.toml
+      - run: npm ci
+      - run: npx --no-install biome ci . --error-on-warnings
+      - run: npm run check:yaml
+      - run: npm run check:ts
+      - run: npm test
+      - run: sam validate --lint -t aws/template.yaml
+      - name: sam build
+        run: |
+          export PATH="$PWD/node_modules/.bin:$PATH" # SAM's esbuild integration resolves the repo-pinned esbuild
+          sam build -t aws/template.yaml --base-dir .
