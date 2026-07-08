@@ -1,11 +1,14 @@
 name: Deploy
 
-# NOTE: merges performed by actions using secrets.GITHUB_TOKEN do NOT trigger
-# this workflow's `push` event (GitHub security restriction). Prefer merging with
-# a user/PAT token, or re-run via workflow_dispatch: `gh workflow run Deploy --ref main`.
+# Triggered by CI success on main (covers GITHUB_TOKEN auto-merges, which do not
+# fire `push` workflows) and by workflow_dispatch (break-glass). No `push` trigger —
+# that would double-deploy on human/PAT merges that already run CI.
+# Deploy SHA: workflow_run → head_sha of the CI run; workflow_dispatch → github.sha.
 
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
@@ -21,20 +24,31 @@ permissions:
 jobs:
   deploy:
     name: deploy
+    # workflow_run fires on any conclusion — only deploy on green CI.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
+          # workflow_run default checkout is the workflow file's default branch tip,
+          # not the CI commit — pin to the SHA that just passed CI.
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          # deploy-drift resolves Deploy-Commit against origin/main history.
           fetch-depth: 0
 
       - name: Refuse stale deploy
-        if: github.event_name == 'push'
+        if: github.event_name == 'workflow_run'
+        env:
+          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
+          # cancel-in-progress:false queues overlapping deploys; drop any whose
+          # commit main has already moved past (matches stocktextalerts).
           tip="$(git ls-remote origin refs/heads/main | cut -f1)"
-          deploy_sha="${{ github.sha }}"
-          if [ "$tip" != "$deploy_sha" ]; then
-            echo "Deploy triggered for $deploy_sha but main is now at $tip; refusing stale deploy."
+          if [ "$tip" != "$DEPLOY_SHA" ]; then
+            echo "Deploy triggered for $DEPLOY_SHA but main is now at $tip; refusing stale deploy."
             exit 1
           fi
 
@@ -48,21 +62,23 @@ jobs:
       - run: npm ci
 
       - name: Refuse infra-pending deploys
-        if: github.event_name == 'push'
+        if: github.event_name == 'workflow_run'
+        env:
+          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
-          before="${{ github.event.before }}"
-          if [ "$before" = "0000000000000000000000000000000000000000" ]; then
-            echo "No previous SHA on this push; cannot verify template diff — refusing."
+          # Diff the landed commit against its first parent (merge commits: first parent = main tip before merge).
+          if ! git rev-parse --verify -q "${DEPLOY_SHA}^" >/dev/null; then
+            echo "No parent for $DEPLOY_SHA; cannot verify template diff — refusing."
             exit 1
           fi
-          changed="$(git diff --name-only "$before" "${{ github.sha }}")"
+          changed="$(git diff --name-only "${DEPLOY_SHA}^" "$DEPLOY_SHA")"
           if [ -z "$changed" ]; then
             echo "git diff returned no files — cannot verify; refusing deploy."
             exit 1
           fi
           if grep -qx 'aws/template.yaml' <<<"$changed"; then
-            echo "aws/template.yaml changed in this push."
+            echo "aws/template.yaml changed in this commit."
             echo "Run npm run deploy:infra locally with admin MFA, then re-run this workflow."
             exit 1
           fi
@@ -84,7 +100,7 @@ jobs:
         run: |
           set -euo pipefail
           STACK=todoist-backlog-scheduler
-          COMMIT="${{ github.sha }}"
+          COMMIT="${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}"
           for LOGICAL in SchedulerFunction; do
             fn=$(aws cloudformation describe-stack-resource \
               --stack-name "$STACK" --logical-resource-id "$LOGICAL" \
