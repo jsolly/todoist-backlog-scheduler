@@ -1,0 +1,113 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+# OIDC → github-actions-deploy (trust: repo:jsolly/todoist-backlog-scheduler:ref:refs/heads/main).
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    name: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Refuse stale deploy
+        if: github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          tip="$(git ls-remote origin refs/heads/main | cut -f1)"
+          deploy_sha="${{ github.sha }}"
+          if [ "$tip" != "$deploy_sha" ]; then
+            echo "Deploy triggered for $deploy_sha but main is now at $tip; refusing stale deploy."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - uses: jdx/mise-action@v2
+
+      - run: npm ci
+
+      - name: Refuse infra-pending deploys
+        if: github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          before="${{ github.event.before }}"
+          if [ "$before" = "0000000000000000000000000000000000000000" ]; then
+            echo "No previous SHA on this push; cannot verify template diff — refusing."
+            exit 1
+          fi
+          changed="$(git diff --name-only "$before" "${{ github.sha }}")"
+          if [ -z "$changed" ]; then
+            echo "git diff returned no files — cannot verify; refusing deploy."
+            exit 1
+          fi
+          if grep -qx 'aws/template.yaml' <<<"$changed"; then
+            echo "aws/template.yaml changed in this push."
+            echo "Run npm run deploy:infra locally with admin MFA, then re-run this workflow."
+            exit 1
+          fi
+
+      - name: sam build
+        run: |
+          set -euo pipefail
+          export PATH="$PWD/node_modules/.bin:$PATH"
+          # samconfig.toml is gitignored — pass template/base-dir explicitly (matches ci.yml).
+          sam build -t aws/template.yaml --base-dir .
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: arn:aws:iam::730335616323:role/github-actions-deploy
+          aws-region: us-east-1
+
+      - name: Deploy SchedulerFunction
+        run: |
+          set -euo pipefail
+          STACK=todoist-backlog-scheduler
+          COMMIT="${{ github.sha }}"
+          for LOGICAL in SchedulerFunction; do
+            fn=$(aws cloudformation describe-stack-resource \
+              --stack-name "$STACK" --logical-resource-id "$LOGICAL" \
+              --query 'StackResourceDetail.PhysicalResourceId' --output text)
+            (cd ".aws-sam/build/$LOGICAL" && zip -qr "../$LOGICAL.zip" .)
+            out="$(aws lambda update-function-code \
+              --function-name "$fn" \
+              --zip-file "fileb://.aws-sam/build/$LOGICAL.zip" \
+              --query '[CodeSha256, FunctionArn]' --output text)"
+            aws lambda wait function-updated-v2 --function-name "$fn"
+            read -r sha arn <<<"$out"
+            err=""
+            for attempt in 1 2 3; do
+              if err="$(aws lambda tag-resource --resource "$arn" \
+                --tags "Deploy-Sha256=$sha,Deploy-Commit=$COMMIT" 2>&1 >/dev/null)"; then
+                err=""
+                break
+              fi
+              if [ "$attempt" -eq 3 ]; then
+                echo "✗ could not tag $arn with deploy provenance after 3 attempts. Last error: ${err:-unknown}" >&2
+                exit 1
+              fi
+              echo "  … tag-resource failed (attempt $attempt/3) — retrying" >&2
+              sleep "$attempt"
+            done
+            echo "✓ $LOGICAL → $fn ($sha)"
+          done
+
+      - name: Deploy drift check
+        run: npm run check:deploy-drift

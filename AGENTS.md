@@ -2,7 +2,7 @@
 
 Ship profile: `aws-sam`
 
-**Post-push (step 12):** Run `npm run deploy:code` after push when handler code changed. Run `npm run deploy:infra` manually (human MFA) when `aws/template.yaml` changes — never auto-run from `/ship`.
+**Post-push (step 12):** Code deploys via `.github/workflows/deploy.yml` on push to `main` (OIDC). `/ship` does not run a local deploy — babysit with `gh run watch` if you want. Run `npm run deploy:infra` manually (human MFA) when `aws/template.yaml` changes — never auto-run from `/ship`. Local `npm run deploy:code` is break-glass only (will be removed after the workflow is proven).
 
 Local gate before push: `npm test && npm run check:ts && npx biome ci .`.
 
@@ -61,6 +61,6 @@ npm run deploy:infra              # full deploy via aws/deploy.sh: npm ci + sam 
 - **Logger contract:** `tests/logging-contract.test.ts` + `tests/logging-snapshot.test.ts` pin the structured-logger shape; re-sync after edits to the canonical (see Key Constraints).
 - **Secrets:** `.env.local` for local runs, SSM for the deployed Lambda.
 
-## Deploy model (agent-scoped)
+## Deploy model
 
-Routine **code-only** Lambda deploys: `npm run deploy:code` — runs `lambda update-function-code` under the scoped `agent-deploy` role (`AWS_PROFILE=fleet-deploy` locally via gitignored `.env.local`/shell). The role cannot create or mutate infrastructure (explicit IAM deny). **Infra/template changes** require a full `sam deploy` with admin SSO creds on the laptop.
+**Code-only** deploys via `.github/workflows/deploy.yml` on push to `main` (OIDC → `github-actions-deploy`). Break-glass: `workflow_dispatch`, or local `npm run deploy:code` under `AWS_PROFILE=fleet-deploy`. **Infra/template changes** require a full `sam deploy` with admin SSO creds on the laptop (`npm run deploy:infra`); the deploy workflow fails closed if `aws/template.yaml` changed in the landed push.
