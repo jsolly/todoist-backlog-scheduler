@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Pre-push gate for todoist-backlog-scheduler.
+# Pre-commit gate for todoist-backlog-scheduler.
 #
 # Thin shim over the shared fleet gate library (dotagents/gate/gate-lib.sh): the
-# ~100 lines of shared boilerplate — push-ref parsing, the gitleaks secrets scan,
-# markdown-lint-on-change, the doc-only fast path, and run_step (silent on green,
-# full output on red) — live in the lib. This file declares only the quality
+# ~100 lines of shared boilerplate — staged-set inspection, the gitleaks secrets
+# scan, markdown-lint-on-change, the doc-only fast path, and run_step (silent on
+# green, full output on red) — live in the lib. This file declares only the quality
 # steps. Gate-only: todoist's CI workflow never deployed; the SAM deploy stays a
 # manual local step (`npm run deploy:infra`), so there is no working-tree guard here.
 set -euo pipefail
@@ -16,7 +16,7 @@ source "${DOTAGENTS_GATE_LIB:-$HOME/code/dotagents/gate/gate-lib.sh}" || {
   exit 1
 }
 
-gate_begin "todoist-backlog-scheduler"   # parse push; gitleaks; md-lint; doc-only fast path; banner; ERR trap
+gate_begin_commit "todoist-backlog-scheduler"   # inspect staged set; gitleaks; md-lint; doc-only fast path; banner; ERR trap
 
 gate_require_node                         # enforce the pinned Node (.nvmrc), not whatever's on PATH
 # Resolve sam to the repo-pinned version (.mise.toml) — non-interactive hook, so the shell profile's
@@ -25,7 +25,7 @@ command -v mise >/dev/null 2>&1 && eval "$(mise activate bash --shims)"
 gate_require_cli sam                       # the sam validate step needs the SAM CLI (system tool, not an npm dep)
 
 # --- Quality gate (run_step: silent on green, full output + abort on red) ---
-run_step "dep grounding" gate_check_dep_grounding .git-hooks/pre-push scripts/*.sh aws/*.sh
+run_step "dep grounding" gate_check_dep_grounding .git-hooks/pre-commit scripts/*.sh aws/*.sh
 run_step "biome ci"  npx --no-install biome ci . --error-on-warnings
 run_step "yaml lint" npm run check:yaml
 run_step "tsc"       npm run check:ts
@@ -42,4 +42,4 @@ run_step "sam validate" sam validate --lint -t aws/template.yaml
 # relative). esbuild BuildMethod → no Docker; gate_require_cli sam is the precond.
 run_step "sam build" gate_sam_build -t aws/template.yaml --base-dir .
 
-echo "✓ pre-push gate complete  (deploy is manual: npm run deploy:infra)"
+echo "✓ pre-commit gate complete  (deploy is manual: npm run deploy:infra)"
