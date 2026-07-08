@@ -1,5 +1,9 @@
 name: Deploy
 
+# NOTE: merges performed by actions using secrets.GITHUB_TOKEN do NOT trigger
+# this workflow's `push` event (GitHub security restriction). Prefer merging with
+# a user/PAT token, or re-run via workflow_dispatch: `gh workflow run Deploy --ref main`.
+
 on:
   push:
     branches: [main]
