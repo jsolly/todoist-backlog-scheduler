@@ -27,6 +27,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - uses: jdx/mise-action@v2 # installs the pinned aws/sam from .mise.toml
       - run: npm ci
+      - run: npm run check:actions
       - run: npx --no-install biome ci . --error-on-warnings
       - run: npm run check:yaml
       - run: npm run check:ts
