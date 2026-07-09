@@ -28,6 +28,7 @@ gate_require_cli sam                       # the sam validate step needs the SAM
 run_step "dep grounding" gate_check_dep_grounding .git-hooks/pre-commit scripts/*.sh aws/*.sh
 run_step "biome ci"  npx --no-install biome ci . --error-on-warnings
 run_step "yaml lint" npm run check:yaml
+run_step "actionlint"             npm run check:actions
 run_step "tsc"       npm run check:ts
 run_step "vitest"    npm test
 run_step "sam validate" sam validate --lint -t aws/template.yaml

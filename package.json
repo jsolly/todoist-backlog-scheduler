@@ -1,34 +1,37 @@
 {
-  "name": "todoist-backlog-scheduler",
-  "version": "0.2.0",
-  "private": true,
-  "type": "module",
-  "description": "Distribute undated Todoist tasks evenly across the upcoming week",
-  "engines": {
-    "node": "24.x"
-  },
-  "scripts": {
-    "worktree:init": "bash scripts/worktree-init.sh; npm ci && (command -v mise >/dev/null 2>&1 && mise install || true)",
-    "check:ts": "tsc --noEmit",
-    "check:biome": "biome check --write --no-errors-on-unmatched",
-    "check:md": "bash scripts/lint-md.sh",
-    "check:yaml": "uvx yamllint@1.38.0 .",
-    "check:deploy-drift": "tsx scripts/check-deploy-drift.ts",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "scheduler": "tsx --env-file-if-exists=.env.local src/cli.ts",
-    "deploy:infra": "bash aws/deploy.sh",
-    "prepare": "if [ -z \"$CI\" ] && git rev-parse --git-dir >/dev/null 2>&1; then git config core.hooksPath .git-hooks; fi"
-  },
-  "devDependencies": {
-    "@aws-sdk/client-ssm": "^3.1073.0",
-    "@biomejs/biome": "^2.4.10",
-    "@types/aws-lambda": "^8.10.152",
-    "@types/node": "^24.7.2",
-    "esbuild": "^0.25.10",
-    "markdownlint-cli2": "^0.22.1",
-    "tsx": "^4.20.6",
-    "typescript": "^5.9.3",
-    "vitest": "^4.1.5"
-  }
+	"name": "todoist-backlog-scheduler",
+	"version": "0.2.0",
+	"private": true,
+	"type": "module",
+	"description": "Distribute undated Todoist tasks evenly across the upcoming week",
+	"engines": {
+		"node": "24.x"
+	},
+	"scripts": {
+		"worktree:init": "bash scripts/worktree-init.sh; npm ci && (command -v mise >/dev/null 2>&1 && mise install || true)",
+		"check:ts": "tsc --noEmit",
+		"check:biome": "biome check --write --no-errors-on-unmatched",
+		"check:md": "bash scripts/lint-md.sh",
+		"check:yaml": "uvx yamllint@1.38.0 .",
+		"check:deploy-drift": "tsx scripts/check-deploy-drift.ts",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"scheduler": "tsx --env-file-if-exists=.env.local src/cli.ts",
+		"deploy:infra": "bash aws/deploy.sh",
+		"prepare": "if [ -z \"$CI\" ] && git rev-parse --git-dir >/dev/null 2>&1; then git config core.hooksPath .git-hooks; fi",
+		"check:actions": "bash scripts/check-actions.sh"
+	},
+	"devDependencies": {
+		"@aws-sdk/client-ssm": "^3.1073.0",
+		"@biomejs/biome": "^2.4.10",
+		"@types/aws-lambda": "^8.10.152",
+		"@types/node": "^24.7.2",
+		"esbuild": "^0.25.10",
+		"github-actionlint": "^1.7.12",
+		"markdownlint-cli2": "^0.22.1",
+		"shellcheck": "^4.1.0",
+		"tsx": "^4.20.6",
+		"typescript": "^5.9.3",
+		"vitest": "^4.1.5"
+	}
 }
