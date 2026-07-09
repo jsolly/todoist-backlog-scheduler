@@ -10,9 +10,9 @@
 	"scripts": {
 		"worktree:init": "bash scripts/worktree-init.sh; npm ci && (command -v mise >/dev/null 2>&1 && mise install || true)",
 		"check:ts": "tsc --noEmit",
-		"check:biome": "biome check --write --no-errors-on-unmatched",
+		"check:biome": "biome check --write --no-errors-on-unmatched --error-on-warnings",
 		"check:md": "bash scripts/lint-md.sh",
-		"check:yaml": "uvx yamllint@1.38.0 .",
+		"check:yaml": "uvx yamllint@1.38.0 -s .",
 		"check:deploy-drift": "tsx scripts/check-deploy-drift.ts",
 		"test": "vitest run",
 		"test:watch": "vitest",
