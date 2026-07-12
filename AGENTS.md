@@ -64,3 +64,7 @@ npm run deploy:infra              # full deploy via aws/deploy.sh: npm ci + sam 
 ## Deploy model
 
 **Code-only** deploys via `.github/workflows/deploy.yml` on push to `main` (OIDC → `github-actions-deploy`). Break-glass: `gh workflow run Deploy --ref main`. **Infra/template changes** require a full `sam deploy` with admin SSO creds on the laptop (`npm run deploy:infra`); the deploy workflow fails closed if `aws/template.yaml` changed in the landed push.
+
+## Local UI verification
+
+No user-facing web UI — browser smoke N/A. Verification is `npm test`, `npm run check:ts`, and `npx biome ci .` (see Local development) — not a browser.
