@@ -1,10 +1,12 @@
 ## Ship
 
 Ship profile: `aws-sam`
+Integration: `pr-auto-merge`
+CI owner: `local`
 
-**Post-push (step 12):** Code deploys via `.github/workflows/deploy.yml` on push to `main` (OIDC). `/ship` does not run a local deploy — babysit with `gh run watch` if you want. Break-glass: `gh workflow run Deploy --ref main`. Run `npm run deploy:infra` manually (human MFA) when `aws/template.yaml` changes — never auto-run from `/ship`.
-
-Local gate before push: `npm test && npm run check:ts && npx biome ci .`.
+Code deploys through `.github/workflows/deploy.yml` after merge to `main` using the
+`github-actions-deploy` role. Changes to `aws/template.yaml` require the manual,
+human-MFA `npm run deploy:infra` path documented under [Deploy model](#deploy-model).
 
 ## Local development
 
